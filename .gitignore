@@ -8,6 +8,8 @@ obj/
 *.user
 *.userosscache
 *.sln.docstates
+*.sql
+*.config
 
 # Visual Studio cache/options
 .vs/
