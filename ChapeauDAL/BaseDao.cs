@@ -17,8 +17,6 @@ namespace ChapeauG5.ChapeauDAL
         {
             // Get connection string from App.config
             connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5DB"].ConnectionString;
-          //connectionString = "Server=den1.mssql7.gear.host;Database=chapeau242501;Username=chapeau242501;Password=Cw9AH-Y5~f0B;Trusted_Connection=True;";
-
         }
 
         protected SqlConnection GetConnection()
