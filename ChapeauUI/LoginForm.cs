@@ -1,8 +1,9 @@
+using ChapeauModel;
+using ChapeauService;
+using ChapeauUI;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using ChapeauModel;
-using ChapeauService;
 
 namespace ChapeauG5
 {
@@ -79,6 +80,23 @@ namespace ChapeauG5
         {
             Form formToShow = new Form1(); // Temporarily use Form1 for all roles
 
+
+            switch (role)
+            {
+                case EmployeeRole.Waiter:
+                    formToShow = new Form1(); // Your waiter dashboard
+                    break;
+            
+                    break;
+                case EmployeeRole.Manager:
+                    formToShow = new ManagerDashboardForm(); // Create this form
+                    break;
+                default:
+                    formToShow = new Form1();
+                    break;
+            }
+
+
             // Here is where we change forms based on role
 
             /*
@@ -104,7 +122,7 @@ namespace ChapeauG5
                     break;
             }
             */
-            
+
             // Set the form's start position and size
             formToShow.StartPosition = FormStartPosition.CenterScreen;
             formToShow.FormClosed += (s, args) => this.Close();
