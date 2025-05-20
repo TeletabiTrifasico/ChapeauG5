@@ -1,6 +1,6 @@
 # Chapeau Restaurant Management System
 
-![Chapeau Logo](https://raw.githubusercontent.com/username/ChapeauG5/main/ChapeauUI/logo.png)
+![Chapeau Logo](https://raw.githubusercontent.com/TeletabiTrifasico/ChapeauG5/Hugo/Logo.png)
 
 A Windows Forms application developed for restaurant management at Chapeau Restaurant.
 
