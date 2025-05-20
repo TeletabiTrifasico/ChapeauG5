@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+  <connectionStrings>
+    <add name="ChapeauG5DB"
+         connectionString="Data Source=YOUR_SERVER;Initial Catalog=chapeau;User ID=YOUR_USERNAME;Password=YOUR_PASSWORD;TrustServerCertificate=True"
+         providerName="Microsoft.Data.SqlClient" />
+  </connectionStrings>
+</configuration>
