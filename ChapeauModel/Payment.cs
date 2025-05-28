@@ -20,7 +20,7 @@ namespace ChapeauModel
         public int VatPercentage { get; set; }
         public decimal TipAmount { get; set; }
         public decimal FinalAmount { get; set; }
-        public int EmployeeId { get; set; }
+        public Employee EmployeeId { get; set; }
         
         public Payment()
         {
