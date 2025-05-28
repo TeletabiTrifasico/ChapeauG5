@@ -17,8 +17,10 @@ namespace ChapeauDAL
             
             SqlParameter[] parameters = new SqlParameter[]
             {
-                new SqlParameter("@TableId", order.TableId),
-                new SqlParameter("@EmployeeId", order.EmployeeId),
+                // Extract the TableId value from the Table object
+                new SqlParameter("@TableId", order.TableId != null ? order.TableId.TableId : (object)DBNull.Value),
+                // Extract the EmployeeId value from the Employee object
+                new SqlParameter("@EmployeeId", order.EmployeeId != null ? order.EmployeeId.EmployeeId : (object)DBNull.Value),
                 new SqlParameter("@CreatedAt", order.CreatedAt),
                 new SqlParameter("@IsDone", order.IsDone)
             };
@@ -34,12 +36,13 @@ namespace ChapeauDAL
             
             SqlParameter[] parameters = new SqlParameter[]
             {
-                new SqlParameter("@OrderId", item.OrderId),
-                new SqlParameter("@MenuItemId", item.MenuItemId),
+                new SqlParameter("@OrderId", item.OrderId != null ? item.OrderId.OrderId : (object)DBNull.Value),
+                new SqlParameter("@MenuItemId", item.MenuItemId != null ? item.MenuItemId.MenuItemId : (object)DBNull.Value),
                 new SqlParameter("@Quantity", item.Quantity),
                 new SqlParameter("@Comment", string.IsNullOrEmpty(item.Comment) ? (object)DBNull.Value : item.Comment),
                 new SqlParameter("@CreatedAt", item.CreatedAt),
-                new SqlParameter("@Status", item.Status)
+                // Fix: Use OrderStatus enum instead of Status
+                new SqlParameter("@Status", item.Status.ToString())
             };
             
             ExecuteEditQuery(query, parameters);
@@ -89,14 +92,14 @@ namespace ChapeauDAL
                 OrderItem item = new OrderItem
                 {
                     OrderItemId = (int)dr["order_item_id"],
-                    OrderId = (int)dr["order_id"],
-                    MenuItemId = (int)dr["menu_item_id"],
+                    OrderId = new Order { OrderId = (int)dr["order_id"] },
+                    MenuItemId = new MenuItem { MenuItemId = (int)dr["menu_item_id"] },
                     Quantity = (int)dr["quantity"],
                     Comment = dr["comment"] != DBNull.Value ? (string)dr["comment"] : string.Empty,
                     CreatedAt = (DateTime)dr["created_at"],
-                    Status = (string)dr["status"],
-                    ItemName = (string)dr["name"],
-                    ItemPrice = (decimal)dr["price"]
+                    // Fix: Use OrderStatus enum instead of Status
+                    Status = Enum.TryParse<OrderItem.OrderStatus>(dr["status"].ToString(), true, out OrderItem.OrderStatus status) 
+                            ? status : OrderItem.OrderStatus.Ordered
                 };
                 
                 items.Add(item);
@@ -107,17 +110,29 @@ namespace ChapeauDAL
         
         private Order ReadOrder(DataRow dr)
         {
-            return new Order
+            int employeeId = (int)dr["employee_id"];
+            
+            // Create a basic Order object
+            Order order = new Order
             {
                 OrderId = (int)dr["order_id"],
-                TableId = (int)dr["table_id"],
-                EmployeeId = (int)dr["employee_id"],
+                TableId = new Table { TableId = (int)dr["table_id"] },
+                // Just provide a reference to the ID, we'll load the rest later if needed
+                EmployeeId = new Employee { 
+                    EmployeeId = employeeId,
+                    Username = "temp",  // Required fields with temporary values
+                    PasswordHash = "temp", 
+                    FirstName = "temp", 
+                    LastName = "temp", 
+                    Email = "temp@example.com" 
+                },
                 CreatedAt = (DateTime)dr["created_at"],
                 IsDone = (bool)dr["is_done"]
             };
+            
+            return order;
         }
 
-        // Add this method to mark all items as served (Temporary when clicking pay button) (TESTING PURPOSES)
         public void MarkAllItemsAsServed(int orderId)
         {
             string query = @"

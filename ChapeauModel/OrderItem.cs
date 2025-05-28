@@ -8,13 +8,14 @@ namespace ChapeauModel
         public int Quantity { get; set; }
         public string Comment { get; set; }
         public DateTime CreatedAt { get; set; }
-        public enum Status
+        public OrderStatus Status { get; set; }
+    
+        public enum OrderStatus
         {
             Ordered,
             BeingPrepared,
             ReadyToBeServed,
             Served,
         }
-
     }
 }

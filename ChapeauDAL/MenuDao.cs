@@ -20,7 +20,9 @@ namespace ChapeauDAL
                 MenuCategory category = new MenuCategory
                 {
                     CategoryId = (int)dr["category_id"],
+                    // Fixed to match the property name in the model
                     Name = (string)dr["name"],
+                    // Use the string value directly
                     MenuCard = (string)dr["menu_card"]
                 };
                 
@@ -57,7 +59,7 @@ namespace ChapeauDAL
                     Description = dr["description"] != DBNull.Value ? (string)dr["description"] : string.Empty,
                     Price = (decimal)dr["price"],
                     Stock = (int)dr["stock"],
-                    CategoryId = (int)dr["category_id"],
+                    CategoryId = new Menu { CategoryId = (int)dr["category_id"] },
                     VatPercentage = (int)dr["vat_percentage"],
                     IsActive = (bool)dr["is_active"],
                     CourseType = dr["course_type"] != DBNull.Value ? 
@@ -77,6 +79,18 @@ namespace ChapeauDAL
                 !Enum.TryParse<CourseType>(courseType, true, out CourseType result))
             {
                 return CourseType.Main; // Default
+            }
+            
+            return result;
+        }
+        
+        // Added method to parse MenuCard enum
+        private MenuCard ParseMenuCard(string menuCard)
+        {
+            if (string.IsNullOrEmpty(menuCard) || 
+                !Enum.TryParse<MenuCard>(menuCard, true, out MenuCard result))
+            {
+                return MenuCard.Food; // Default
             }
             
             return result;
