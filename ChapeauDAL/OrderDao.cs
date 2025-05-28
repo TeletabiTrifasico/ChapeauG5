@@ -72,7 +72,7 @@ namespace ChapeauDAL
         public List<OrderItem> GetOrderItemsByOrderId(int orderId)
         {
             string query = @"
-                SELECT oi.*, mi.name, mi.price
+                SELECT oi.*, mi.name, mi.price, mi.description, mi.stock, mi.vat_percentage, mi.is_active
                 FROM Order_Item oi
                 JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
                 WHERE oi.order_id = @OrderId
@@ -89,15 +89,25 @@ namespace ChapeauDAL
             
             foreach (DataRow dr in dataTable.Rows)
             {
+                MenuItem menuItem = new MenuItem
+                {
+                    MenuItemId = (int)dr["menu_item_id"],
+                    Name = (string)dr["name"],
+                    Price = (decimal)dr["price"],
+                    Description = dr["description"] != DBNull.Value ? (string)dr["description"] : string.Empty,
+                    Stock = (int)dr["stock"],
+                    VatPercentage = (int)dr["vat_percentage"],
+                    IsActive = (bool)dr["is_active"]
+                };
+                
                 OrderItem item = new OrderItem
                 {
                     OrderItemId = (int)dr["order_item_id"],
                     OrderId = new Order { OrderId = (int)dr["order_id"] },
-                    MenuItemId = new MenuItem { MenuItemId = (int)dr["menu_item_id"] },
+                    MenuItemId = menuItem, // Use the fully populated MenuItem
                     Quantity = (int)dr["quantity"],
                     Comment = dr["comment"] != DBNull.Value ? (string)dr["comment"] : string.Empty,
                     CreatedAt = (DateTime)dr["created_at"],
-                    // Fix: Use OrderStatus enum instead of Status
                     Status = Enum.TryParse<OrderItem.OrderStatus>(dr["status"].ToString(), true, out OrderItem.OrderStatus status) 
                             ? status : OrderItem.OrderStatus.Ordered
                 };
@@ -143,6 +153,37 @@ namespace ChapeauDAL
             SqlParameter[] parameters = new SqlParameter[]
             {
                 new SqlParameter("@OrderId", orderId)
+            };
+            
+            ExecuteEditQuery(query, parameters);
+        }
+
+        public void UpdateOrderItem(int orderItemId, int quantity, string comment)
+        {
+            string query = @"
+                UPDATE Order_Item 
+                SET quantity = @Quantity, comment = @Comment
+                WHERE order_item_id = @OrderItemId";
+            
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId),
+                new SqlParameter("@Quantity", quantity),
+                new SqlParameter("@Comment", string.IsNullOrEmpty(comment) ? (object)DBNull.Value : comment)
+            };
+            
+            ExecuteEditQuery(query, parameters);
+        }
+
+        public void DeleteOrderItem(int orderItemId)
+        {
+            string query = @"
+                DELETE FROM Order_Item 
+                WHERE order_item_id = @OrderItemId";
+            
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId)
             };
             
             ExecuteEditQuery(query, parameters);

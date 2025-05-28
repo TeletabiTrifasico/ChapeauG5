@@ -16,65 +16,79 @@ namespace ChapeauG5
         public TableView(Employee employee)
         {
             InitializeComponent();
-            tableService = new TableService();
             loggedInEmployee = employee;
+            tableService = new TableService();
             tableButtons = new List<Button>();
+            
+            lblWelcome.Text = $"Welcome, {employee.FirstName}!";
         }
         
         private void TableView_Load(object sender, EventArgs e)
         {
-            lblWelcome.Text = $"Welcome, {loggedInEmployee.FirstName}!";
-            RefreshTables();            
+            RefreshTables();
         }
         
         private void RefreshTables()
         {
+            tlpTables.Controls.Clear();
+            tableButtons.Clear();
+            
             List<Table> tables = tableService.GetAllTables();
             
-            // Clear existing buttons if any
-            if (tableButtons.Count > 0)
-            {
-                foreach (Button btn in tableButtons)
-                {
-                    flpTables.Controls.Remove(btn);
-                }
-                tableButtons.Clear();
-            }
+            // Calculate positions to create a 5x2 grid
+            int maxTables = Math.Min(tables.Count, 10); // Maximum of 10 tables in a 5x2 grid
             
-            // Create table buttons
-            foreach (Table table in tables)
+            for (int i = 0; i < maxTables; i++)
             {
-                Button btnTable = new Button();
-                btnTable.Text = $"Table {table.TableNumber}\n({table.Capacity} seats)";
-                btnTable.Size = new Size(120, 80);
-                btnTable.Tag = table;
-                btnTable.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-                btnTable.FlatStyle = FlatStyle.Flat;
+                Table table = tables[i];
                 
-                // Set color based on status but ALWAYS keep it clickable
-                if (table.IsAvailable)
+                Button btnTable = new Button();
+                btnTable.Text = $"Table {table.TableNumber}";
+                btnTable.Size = new Size(100, 100); // Consistent square size
+                btnTable.Tag = table;
+                
+                // Use Anchor instead of Dock for centering
+                btnTable.Dock = DockStyle.None;
+                btnTable.Anchor = AnchorStyles.None; // This centers the button in its cell
+                btnTable.FlatStyle = FlatStyle.Flat; // Keep flat styleyle
+                btnTable.FlatAppearance.BorderSize = 0; // Remove border completelyy
+                
+                // Style the button based on the table status
+                if (table.Status == TableStatus.Free)
                 {
                     btnTable.BackColor = Color.LightGreen;
+                    // No border color needed since border size is 0
                 }
-                else
+                else if (table.Status == TableStatus.Occupied)
                 {
                     btnTable.BackColor = Color.LightCoral;
-                    // Remove this line to keep the button enabled:
-                    // btnTable.Enabled = false;
+                    // No border color needed since border size is 0
                 }
                 
                 btnTable.Click += BtnTable_Click;
                 tableButtons.Add(btnTable);
-                flpTables.Controls.Add(btnTable);
+                
+                // Calculate row and column for the 5x2 grid
+                int row = i / 5;
+                int col = i % 5;
+                
+                tlpTables.Controls.Add(btnTable, col, row);
             }
         }
         
         // Add this check before trying to instantiate OrderView
         private bool IsOrderViewImplemented()
         {
-            // Check if the OrderView type exists in the current assembly
-            Type orderViewType = Type.GetType("ChapeauG5.OrderView");
-            return orderViewType != null;
+            // Check if the OrderView type exists and can be instantiated
+            try
+            {
+                Type orderViewType = typeof(OrderView);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
         
         private void BtnTable_Click(object sender, EventArgs e)
@@ -124,50 +138,6 @@ namespace ChapeauG5
                 // Return null if icon can't be loaded
                 return null;
             }
-        }
-    }
-    
-    public partial class TableView
-    {
-        private FlowLayoutPanel flpTables;
-        private Label lblWelcome;
-        private Button btnLogout;
-        
-        private void InitializeComponent()
-        {
-            this.Text = "Chapeau - Table View";
-            this.Size = new Size(800, 600);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            
-            // Welcome Label
-            lblWelcome = new Label();
-            lblWelcome.Location = new Point(20, 20);
-            lblWelcome.Size = new Size(400, 30);
-            lblWelcome.Font = new Font("Segoe UI", 14, FontStyle.Bold);
-            lblWelcome.Text = "Welcome!";
-            
-            // Logout Button
-            btnLogout = new Button();
-            btnLogout.Location = new Point(680, 20);
-            btnLogout.Size = new Size(80, 30);
-            btnLogout.Text = "Logout";
-            btnLogout.BackColor = Color.LightGray;
-            btnLogout.Click += btnLogout_Click;
-            
-            // Tables Panel
-            flpTables = new FlowLayoutPanel();
-            flpTables.Location = new Point(20, 70);
-            flpTables.Size = new Size(740, 480);
-            flpTables.Padding = new Padding(10);
-            flpTables.AutoScroll = true;
-            
-            this.Controls.Add(lblWelcome);
-            this.Controls.Add(btnLogout);
-            this.Controls.Add(flpTables);
-            
-            this.Load += TableView_Load;
         }
     }
 }

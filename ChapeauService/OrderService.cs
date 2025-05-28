@@ -69,5 +69,15 @@ namespace ChapeauService
         {
             orderDao.MarkAllItemsAsServed(orderId);
         }
+
+        public void UpdateOrderItem(int orderItemId, int quantity, string comment)
+        {
+            orderDao.UpdateOrderItem(orderItemId, quantity, comment);
+        }
+
+        public void DeleteOrderItem(int orderItemId)
+        {
+            orderDao.DeleteOrderItem(orderItemId);
+        }
     }
 }
