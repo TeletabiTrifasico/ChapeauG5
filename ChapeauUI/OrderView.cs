@@ -14,8 +14,9 @@ namespace ChapeauG5
         private MenuService menuService;
         private OrderService orderService;
         private TableService tableService;
-        private int currentOrderId;
-        private List<OrderItem> orderItems;
+        private int? currentOrderId; // Make nullable since we might not have an order yet
+        private List<OrderItem> orderItems; // This will be our temporary in-memory list
+        private bool isExistingOrder = false;
         
         public OrderView(Employee employee, Table table)
         {
@@ -32,8 +33,7 @@ namespace ChapeauG5
         {
             lblTable.Text = $"Table {selectedTable.TableNumber}";
             
-            // Set this table as occupied
-            tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
+            // Don't mark as occupied yet - only when order is confirmed
             
             // Load menu categories
             LoadMenuCategories();
@@ -45,13 +45,16 @@ namespace ChapeauG5
             {
                 // Load existing order
                 currentOrderId = existingOrder.OrderId;
-                RefreshOrderItems();
+                isExistingOrder = true;
+                
+                // Load existing items from database
+                orderItems = orderService.GetOrderItemsByOrderId(existingOrder.OrderId);
+                RefreshOrderItemsView();
+                
+                // If it's an existing order, set the table as occupied
+                tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
             }
-            else
-            {
-                // Create a new order
-                currentOrderId = orderService.CreateOrder(selectedTable.TableId, loggedInEmployee.EmployeeId);
-            }
+            // Don't create a new order yet - wait for confirmation
         }
         
         private void LoadMenuCategories()
@@ -110,22 +113,36 @@ namespace ChapeauG5
                 return;
             }
             
-            // Add to order
-            orderService.AddOrderItem(currentOrderId, selectedItem.MenuItemId, quantity, comment);
+            // Create a local OrderItem object but don't save to database yet
+            OrderItem newItem = new OrderItem
+            {
+                OrderId = new Order { OrderId = currentOrderId ?? 0 }, // Use 0 as a temporary ID if no order exists yet
+                MenuItemId = selectedItem,
+                Quantity = quantity,
+                Comment = comment,
+                CreatedAt = DateTime.Now,
+                Status = OrderItem.OrderStatus.Ordered
+            };
             
-            // Refresh order items
-            RefreshOrderItems();
+            // Add to our local list
+            orderItems.Add(newItem);
+            
+            // Refresh the display only
+            RefreshOrderItemsView();
             
             // Clear inputs
             nudQuantity.Value = 1;
             txtComment.Text = string.Empty;
             lvMenuItems.SelectedItems.Clear();
             
+            // Ensure Save button is visible
+            btnSaveOrder.Visible = true;
+            
             MessageBox.Show($"{quantity}x {selectedItem.Name} added to order.", "Item Added", 
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         
-        private void RefreshOrderItems()
+        private void RefreshOrderItemsView()
         {
             try
             {
@@ -135,9 +152,6 @@ namespace ChapeauG5
                     Console.WriteLine("ListView not initialized");
                     return;
                 }
-                
-                // Get items from database
-                orderItems = orderService.GetOrderItemsByOrderId(currentOrderId);
                 
                 lvOrderItems.Items.Clear();
                 decimal orderTotal = 0;
@@ -172,48 +186,214 @@ namespace ChapeauG5
                     lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
                     lblOrderTotal.Visible = true;
                 }
+                
+                // Enable/disable buttons based on whether we have items
+                btnRemoveItem.Enabled = orderItems.Count > 0;
+                btnEditItem.Enabled = orderItems.Count > 0;
+                btnSaveOrder.Enabled = orderItems.Count > 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in RefreshOrderItems: {ex.Message}");
+                Console.WriteLine($"Error in RefreshOrderItemsView: {ex.Message}");
                 MessageBox.Show($"Error refreshing order items: {ex.Message}", 
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         
-        // Helper methods to safely get properties
+        // Add this method to save the entire order at once
+        private void btnSaveOrder_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (orderItems.Count == 0)
+                {
+                    MessageBox.Show("Please add at least one item to the order.", 
+                        "Empty Order", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                // If this is a new order, create it first
+                if (!currentOrderId.HasValue)
+                {
+                    // Create a new order
+                    int newOrderId = orderService.CreateOrder(selectedTable.TableId, loggedInEmployee.EmployeeId);
+                    currentOrderId = newOrderId;
+                    
+                    // Mark the table as occupied
+                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
+                }
+                
+                // Now save each item
+                foreach (OrderItem item in orderItems)
+                {
+                    // Update the order ID in case we just created it
+                    item.OrderId = new Order { OrderId = currentOrderId.Value };
+                    
+                    // Only save items that don't have an OrderItemId yet (new items)
+                    if (item.OrderItemId == 0)
+                    {
+                        orderService.AddOrderItem(currentOrderId.Value, 
+                                                 item.MenuItemId.MenuItemId, 
+                                                 item.Quantity, 
+                                                 item.Comment);
+                    }
+                }
+                
+                isExistingOrder = true;
+                MessageBox.Show("Order saved successfully!", "Success", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Refresh the order from the database
+                orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
+                RefreshOrderItemsView();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving order: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        // Add this method to remove items from the order
+        private void btnRemoveItem_Click(object sender, EventArgs e)
+        {
+            if (lvOrderItems.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select an item to remove.", 
+                    "No Item Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            OrderItem selectedItem = (OrderItem)lvOrderItems.SelectedItems[0].Tag;
+            
+            // If it's an existing order with items already in the database, we should warn the user
+            if (isExistingOrder && selectedItem.OrderItemId != 0)
+            {
+                DialogResult result = MessageBox.Show(
+                    "This item is already saved in the database. Are you sure you want to remove it?",
+                    "Confirm Removal",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                    
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
+                
+                // Here we would need to implement a delete method in the OrderDao
+                // For now, we'll just remove it locally
+            }
+            
+            // Remove from our local list
+            orderItems.Remove(selectedItem);
+            
+            // Refresh the display
+            RefreshOrderItemsView();
+        }
+        
+        // Add this method to edit items in the order
+        private void btnEditItem_Click(object sender, EventArgs e)
+        {
+            if (lvOrderItems.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select an item to edit.", 
+                    "No Item Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            OrderItem selectedItem = (OrderItem)lvOrderItems.SelectedItems[0].Tag;
+            
+            // Create a simple dialog to edit quantity and comment
+            using (Form editForm = new Form())
+            {
+                editForm.Text = "Edit Order Item";
+                editForm.Size = new Size(300, 200);
+                editForm.StartPosition = FormStartPosition.CenterParent;
+                editForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                editForm.MaximizeBox = false;
+                editForm.MinimizeBox = false;
+                
+                Label lblQuantity = new Label();
+                lblQuantity.Text = "Quantity:";
+                lblQuantity.Location = new Point(20, 20);
+                lblQuantity.Size = new Size(70, 20);
+                
+                NumericUpDown nudEditQuantity = new NumericUpDown();
+                nudEditQuantity.Minimum = 1;
+                nudEditQuantity.Maximum = 20;
+                nudEditQuantity.Value = selectedItem.Quantity;
+                nudEditQuantity.Location = new Point(100, 20);
+                nudEditQuantity.Size = new Size(60, 20);
+                
+                Label lblComment = new Label();
+                lblComment.Text = "Comment:";
+                lblComment.Location = new Point(20, 50);
+                lblComment.Size = new Size(70, 20);
+                
+                TextBox txtEditComment = new TextBox();
+                txtEditComment.Text = selectedItem.Comment;
+                txtEditComment.Location = new Point(100, 50);
+                txtEditComment.Size = new Size(170, 20);
+                
+                Button btnSave = new Button();
+                btnSave.Text = "Save";
+                btnSave.DialogResult = DialogResult.OK;
+                btnSave.Location = new Point(100, 90);
+                btnSave.Size = new Size(80, 30);
+                
+                Button btnCancel = new Button();
+                btnCancel.Text = "Cancel";
+                btnCancel.DialogResult = DialogResult.Cancel;
+                btnCancel.Location = new Point(190, 90);
+                btnCancel.Size = new Size(80, 30);
+                
+                editForm.Controls.Add(lblQuantity);
+                editForm.Controls.Add(nudEditQuantity);
+                editForm.Controls.Add(lblComment);
+                editForm.Controls.Add(txtEditComment);
+                editForm.Controls.Add(btnSave);
+                editForm.Controls.Add(btnCancel);
+                
+                editForm.AcceptButton = btnSave;
+                editForm.CancelButton = btnCancel;
+                
+                if (editForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Update the selected item's properties
+                    selectedItem.Quantity = (int)nudEditQuantity.Value;
+                    selectedItem.Comment = txtEditComment.Text;
+                    
+                    // If it's an existing order with items already in the database,
+                    // we would need to update it in the database
+                    // For now, we'll just update our local list
+                    
+                    // Refresh the display
+                    RefreshOrderItemsView();
+                }
+            }
+        }
+        
+        // Helper methods to safely access OrderItem properties
         private string GetItemName(OrderItem item)
         {
-            if (item?.MenuItemId == null)
-                return "Unknown Item";
-                
-            // Try to get the name from the property, or use a placeholder
-            return item.MenuItemId.Name ?? "Unnamed Item";
+            return item?.MenuItemId?.Name ?? "Unknown Item";
         }
-
+        
         private decimal GetItemPrice(OrderItem item)
         {
-            if (item?.MenuItemId == null)
-                return 0;
-                
-            return item.MenuItemId.Price;
+            return item?.MenuItemId?.Price ?? 0;
         }
         
         private string GetItemStatus(OrderItem item)
         {
-            return item.Status.ToString();
-        }
-        
-        private void btnPayment_Click(object sender, EventArgs e)
-        {
-            // Implementation for payment processing
+            return item?.Status.ToString() ?? "Unknown";
         }
         
         private void btnCancel_Click(object sender, EventArgs e)
         {
             try {
-                // Ask for confirmation if the order has items
-                if (orderItems.Count > 0)
+                // Only ask for confirmation if there are unsaved changes
+                if (orderItems.Count > 0 && !isExistingOrder)
                 {
                     DialogResult result = MessageBox.Show(
                         "Are you sure you want to close this order view? All unsaved changes will be lost.",
@@ -226,6 +406,12 @@ namespace ChapeauG5
                         return;
                     }
                 }
+                
+                // If we created a table but never added items to it, we should make it available again
+                if (!isExistingOrder)
+                {
+                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Available);
+                }
             }
             catch (Exception ex) {
                 Console.WriteLine($"Error resetting table status: {ex.Message}");
@@ -233,13 +419,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             
-            // Close the form regardless of whether the status update succeeded
+            // Close the form
             this.Close();
-        }
-        
-        private void OrderView_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            // Any cleanup code needed when the form closes
         }
     }
 }

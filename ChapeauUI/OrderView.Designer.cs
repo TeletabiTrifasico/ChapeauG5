@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using ChapeauModel;
 
 namespace ChapeauG5
 {
@@ -124,6 +125,33 @@ namespace ChapeauG5
             this.lblOrderTotal.Text = "Order Total: €0.00";
             this.lblOrderTotal.Visible = true;
             
+            // Edit Item Button
+            this.btnEditItem = new Button();
+            this.btnEditItem.Location = new Point(450, 550);
+            this.btnEditItem.Size = new Size(120, 40);
+            this.btnEditItem.Text = "Edit Item";
+            this.btnEditItem.BackColor = Color.LightYellow;
+            this.btnEditItem.Click += new EventHandler(this.btnEditItem_Click);
+            this.btnEditItem.Enabled = false;
+            
+            // Remove Item Button
+            this.btnRemoveItem = new Button();
+            this.btnRemoveItem.Location = new Point(580, 550);
+            this.btnRemoveItem.Size = new Size(120, 40);
+            this.btnRemoveItem.Text = "Remove Item";
+            this.btnRemoveItem.BackColor = Color.LightPink;
+            this.btnRemoveItem.Click += new EventHandler(this.btnRemoveItem_Click);
+            this.btnRemoveItem.Enabled = false;
+            
+            // Save Order Button
+            this.btnSaveOrder = new Button();
+            this.btnSaveOrder.Location = new Point(710, 550);
+            this.btnSaveOrder.Size = new Size(160, 40);
+            this.btnSaveOrder.Text = "Save Order";
+            this.btnSaveOrder.BackColor = Color.LightGreen;
+            this.btnSaveOrder.Click += new EventHandler(this.btnSaveOrder_Click);
+            this.btnSaveOrder.Enabled = false;
+            
             // Payment Button
             this.btnPayment = new Button();
             this.btnPayment.Location = new Point(750, 510);
@@ -134,7 +162,7 @@ namespace ChapeauG5
             
             // Cancel Button
             this.btnCancel = new Button();
-            this.btnCancel.Location = new Point(750, 560);
+            this.btnCancel.Location = new Point(750, 600);
             this.btnCancel.Size = new Size(120, 40);
             this.btnCancel.Text = "Close";
             this.btnCancel.BackColor = Color.LightGray;
@@ -151,11 +179,147 @@ namespace ChapeauG5
             this.Controls.Add(this.btnAddToOrder);
             this.Controls.Add(this.lvOrderItems);
             this.Controls.Add(this.lblOrderTotal);
+            this.Controls.Add(this.btnEditItem);
+            this.Controls.Add(this.btnRemoveItem);
+            this.Controls.Add(this.btnSaveOrder);
             this.Controls.Add(this.btnPayment);
             this.Controls.Add(this.btnCancel);
             
             this.Load += new EventHandler(this.OrderView_Load);
             this.FormClosing += new FormClosingEventHandler(this.OrderView_FormClosing);
+        }
+        
+        private void OrderView_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                // Only ask for confirmation if there are unsaved changes and it's not from Cancel button
+                if (orderItems.Count > 0 && !isExistingOrder && e.CloseReason == CloseReason.UserClosing)
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Are you sure you want to close this order view? All unsaved changes will be lost.",
+                        "Confirm Close",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                        
+                    if (result == DialogResult.No)
+                    {
+                        // Cancel the form closing
+                        e.Cancel = true;
+                        return;
+                    }
+                }
+                
+                // If we're closing without having saved an order, reset the table status
+                if (!isExistingOrder)
+                {
+                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Available);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in form closing: {ex.Message}");
+                MessageBox.Show($"Error updating table status: {ex.Message}", 
+                    "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        
+        private void btnPayment_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // First check if there's a saved order
+                if (!currentOrderId.HasValue || !isExistingOrder)
+                {
+                    // No saved order, ask if the user wants to save it first
+                    DialogResult result = MessageBox.Show(
+                        "You need to save the order before proceeding to payment.\nWould you like to save it now?",
+                        "Save Order",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                        
+                    if (result == DialogResult.Yes)
+                    {
+                        // Save the order first
+                        btnSaveOrder_Click(sender, e);
+                        
+                        // If still no valid order after attempted save, return
+                        if (!currentOrderId.HasValue)
+                        {
+                            MessageBox.Show("Cannot proceed to payment without a saved order.",
+                                "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // User chose not to save
+                        return;
+                    }
+                }
+                
+                // Check if there are any items in the order
+                if (orderItems.Count == 0)
+                {
+                    MessageBox.Show("Cannot process payment for an empty order.", 
+                        "Empty Order", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                // Ensure all items are marked as served
+                bool allServed = true;
+                foreach (OrderItem item in orderItems)
+                {
+                    if (item.Status != OrderItem.OrderStatus.Served)
+                    {
+                        allServed = false;
+                        break;
+                    }
+                }
+                
+                if (!allServed)
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Not all items are marked as served. Mark all as served and continue to payment?",
+                        "Items Not Served",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                        
+                    if (result == DialogResult.Yes)
+                    {
+                        // Mark all items as served
+                        orderService.MarkAllItemsAsServed(currentOrderId.Value);
+                        
+                        // Refresh order items
+                        orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
+                        RefreshOrderItemsView();
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                
+                // Open the payment form
+                PaymentForm paymentForm = new PaymentForm(currentOrderId.Value, loggedInEmployee);
+                
+                // Show the payment form as a dialog
+                if (paymentForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Payment was successful, refresh the table view
+                    MessageBox.Show("Payment processed successfully!", 
+                        "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Close this form
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error processing payment: {ex.Message}", 
+                    "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         #endregion
@@ -171,6 +335,9 @@ namespace ChapeauG5
         private Button btnAddToOrder;
         private ListView lvOrderItems;
         private Label lblOrderTotal;
+        private Button btnEditItem;
+        private Button btnRemoveItem;
+        private Button btnSaveOrder;
         private Button btnPayment;
         private Button btnCancel;
     }

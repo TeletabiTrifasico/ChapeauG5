@@ -147,5 +147,36 @@ namespace ChapeauDAL
             
             ExecuteEditQuery(query, parameters);
         }
+
+        public void UpdateOrderItem(int orderItemId, int quantity, string comment)
+        {
+            string query = @"
+                UPDATE Order_Item 
+                SET quantity = @Quantity, comment = @Comment
+                WHERE order_item_id = @OrderItemId";
+            
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId),
+                new SqlParameter("@Quantity", quantity),
+                new SqlParameter("@Comment", string.IsNullOrEmpty(comment) ? (object)DBNull.Value : comment)
+            };
+            
+            ExecuteEditQuery(query, parameters);
+        }
+
+        public void DeleteOrderItem(int orderItemId)
+        {
+            string query = @"
+                DELETE FROM Order_Item 
+                WHERE order_item_id = @OrderItemId";
+            
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId)
+            };
+            
+            ExecuteEditQuery(query, parameters);
+        }
     }
 }
