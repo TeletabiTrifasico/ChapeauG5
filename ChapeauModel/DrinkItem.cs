@@ -6,7 +6,9 @@ namespace ChapeauModel
         public string Name { get; set; }
         public MenuItem MenuItemId { get; set; }
         public bool IsAlcoholic { get; set; }
-        public enum DrinkCategory
+        public DrinkCategory DrinkCategory { get; set; }
+    }
+    public enum DrinkCategory
         {
             SoftDrinks,
             Beers,
@@ -14,5 +16,4 @@ namespace ChapeauModel
             Spirits,
             CoffeeAndTea
         }
-    }
 }

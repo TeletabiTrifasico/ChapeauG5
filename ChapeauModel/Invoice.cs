@@ -6,7 +6,7 @@ namespace ChapeauModel
     public class Invoice
     {
         public int InvoiceId { get; set; }
-        public int OrderId { get; set; }
+        public Order OrderId { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal TotalVat { get; set; }
         public decimal TotalTipAmount { get; set; }
