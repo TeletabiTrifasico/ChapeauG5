@@ -4,8 +4,8 @@ namespace ChapeauModel
 {
     public class InvoiceItem
     {
-        public int OrderItemId { get; set; }
-        public int MenuItemId { get; set; }
+        public OrderItem OrderItemId { get; set; }
+        public MenuItem MenuItemId { get; set; }
         public string ItemName { get; set; } = string.Empty;
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }

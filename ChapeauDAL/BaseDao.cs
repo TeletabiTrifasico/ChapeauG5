@@ -20,12 +20,12 @@ namespace ChapeauDAL
             try
             {
                 // Use ConfigurationManager to get connection string from app.config
-                connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5DB"].ConnectionString;
+                connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5Db"].ConnectionString;
             }
             catch (ConfigurationErrorsException)
             {
                 // Fallback connection string if config is missing
-                connectionString = "Data Source=.;Initial Catalog=ChapeauDb;Integrated Security=True";
+                connectionString = "Data Source=.;Initial Catalog=ChapeauG5Db;Integrated Security=True";
             }
             
             // Initialize adapter for sync methods
