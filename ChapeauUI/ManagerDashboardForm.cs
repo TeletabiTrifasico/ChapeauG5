@@ -1,4 +1,6 @@
 ﻿using ChapeauDAL;
+using ChapeauG5.ChapeauDAL;
+using ChapeauG5.ChapeauModel;
 using ChapeauModel;
 using System;
 using System.Collections.Generic;
@@ -31,6 +33,21 @@ namespace ChapeauUI
 
 
 
+
+        private List<Category> categories;
+
+        private void LoadCategories()
+        {
+            var dao = new CategoryDao(); // You’ll need to create this
+            categories = dao.GetAllCategories();
+
+            categoryComboBox.DataSource = categories;
+            categoryComboBox.DisplayMember = "Name";
+            categoryComboBox.ValueMember = "CategoryID";
+        }
+
+
+
         private void menuDataGridView_SelectionChanged(object sender, EventArgs e)
         {
             if (menuDataGridView.SelectedRows.Count > 0)
@@ -52,17 +69,16 @@ namespace ChapeauUI
 
         private void button1_Click(object sender, EventArgs e)
         {
+            Category selectedCategory = (Category)categoryComboBox.SelectedItem;
+
             MenuItem item = new MenuItem
             {
                 Name = nameTextBox.Text,
                 Price = decimal.Parse(priceTextBox.Text),
                 Stock = int.Parse(stockTextBox.Text),
-              
-                CategoryID = categoryIDComboBox.SelectedIndex + 1, // Assuming categories are indexed starting from 1
-                Category = categoryComboBox.Text
+                CategoryID = selectedCategory.CategoryID,
+                Category = selectedCategory.Name
             };
-            menuItemDao.AddMenuItem(item);
-            LoadMenuItems();
 
         }
 

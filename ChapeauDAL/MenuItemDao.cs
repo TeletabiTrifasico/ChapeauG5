@@ -68,7 +68,7 @@ namespace ChapeauDAL
 
         private int GetCategoryIdByCourseType(string courseType)
         {
-            // This mapping is based on your screenshot
+           
             return courseType switch
             {
                 "Starters" => 1,
