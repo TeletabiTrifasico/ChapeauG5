@@ -20,7 +20,8 @@ namespace ChapeauDAL
             // Parameters to prevent SQL injection and ensure type safety
             SqlParameter[] parameters = new SqlParameter[]
             {
-                new SqlParameter("@OrderId", invoice.OrderId),
+                // Extract OrderId value from Order object
+                new SqlParameter("@OrderId", invoice.OrderId != null ? invoice.OrderId.OrderId : (object)DBNull.Value),
                 new SqlParameter("@TotalAmount", invoice.TotalAmount),
                 new SqlParameter("@TotalVat", invoice.TotalVat),
                 new SqlParameter("@TotalTipAmount", invoice.TotalTipAmount),
@@ -70,7 +71,8 @@ namespace ChapeauDAL
             Invoice invoice = new Invoice
             {
                 InvoiceId = (int)dr["invoice_id"],
-                OrderId = (int)dr["order_id"],
+                // Create Order object with just the ID
+                OrderId = new Order { OrderId = (int)dr["order_id"] },
                 TotalAmount = (decimal)dr["total_amount"],
                 TotalVat = (decimal)dr["total_vat"],
                 TotalTipAmount = (decimal)dr["total_tip_amount"],
@@ -106,7 +108,8 @@ namespace ChapeauDAL
             
             // Create a new invoice object
             Invoice invoice = new Invoice();
-            invoice.OrderId = orderId;
+            // Create Order object with just the ID
+            invoice.OrderId = new Order { OrderId = orderId };
             
             // Initialize running totals
             decimal totalAmount = 0;
@@ -131,8 +134,10 @@ namespace ChapeauDAL
                 // Create an InvoiceItem object to represent this line item
                 InvoiceItem item = new InvoiceItem()
                 {
-                    OrderItemId = (int)dr["order_item_id"],
-                    MenuItemId = (int)dr["menu_item_id"],
+                    // Create OrderItem object with just the ID
+                    OrderItemId = new OrderItem { OrderItemId = (int)dr["order_item_id"] },
+                    // Create MenuItem object with just the ID
+                    MenuItemId = new MenuItem { MenuItemId = (int)dr["menu_item_id"] },
                     ItemName = (string)dr["item_name"],
                     UnitPrice = price,
                     Quantity = quantity,

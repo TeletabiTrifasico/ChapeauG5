@@ -234,7 +234,7 @@ namespace ChapeauG5
                         TipAmount = tipAmount,
                         FinalAmount = totalAmount + tipAmount,
                         Feedback = $"Split payment {invoiceIndex + 1} of {splitInvoices.Count}",
-                        EmployeeId = loggedInEmployee.EmployeeId
+                        EmployeeId = loggedInEmployee
                     };
                     
                     // Process payment

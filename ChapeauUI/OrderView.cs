@@ -135,6 +135,14 @@ namespace ChapeauG5
         {
             try
             {
+                // Ensure ListView is initialized
+                if (lvOrderItems == null)
+                {
+                    Console.WriteLine("ListView not initialized");
+                    return;
+                }
+                
+                // Get items from database
                 orderItems = orderService.GetOrderItemsByOrderId(currentOrderId);
                 
                 lvOrderItems.Items.Clear();
@@ -142,15 +150,21 @@ namespace ChapeauG5
                 
                 foreach (OrderItem item in orderItems)
                 {
-                    ListViewItem lvi = new ListViewItem(item.ItemName);
-                    lvi.SubItems.Add(item.Quantity.ToString());
-                    lvi.SubItems.Add($"€{item.ItemPrice:0.00}");
+                    // Create a safer way to access these properties
+                    string itemName = GetItemName(item);
+                    decimal itemPrice = GetItemPrice(item);
+                    string status = GetItemStatus(item);
+                    string comment = item.Comment ?? string.Empty;
                     
-                    decimal subtotal = item.Quantity * item.ItemPrice;
+                    ListViewItem lvi = new ListViewItem(itemName);
+                    lvi.SubItems.Add(item.Quantity.ToString());
+                    lvi.SubItems.Add($"€{itemPrice:0.00}");
+                    
+                    decimal subtotal = item.Quantity * itemPrice;
                     lvi.SubItems.Add($"€{subtotal:0.00}");
                     
-                    lvi.SubItems.Add(item.Status);
-                    lvi.SubItems.Add(item.Comment);
+                    lvi.SubItems.Add(status);
+                    lvi.SubItems.Add(comment);
                     lvi.Tag = item;
                     
                     lvOrderItems.Items.Add(lvi);
@@ -158,28 +172,83 @@ namespace ChapeauG5
                     orderTotal += subtotal;
                 }
                 
-                // Ensure the order total label exists and is properly configured
-                if (lblOrderTotal == null)
+                // Update the order total
+                if (lblOrderTotal != null)
                 {
-                    lblOrderTotal = new Label();
-                    lblOrderTotal.Size = new Size(250, 30);
-                    lblOrderTotal.Font = new Font("Segoe UI", 12, FontStyle.Bold);
-                    lblOrderTotal.ForeColor = Color.DarkBlue;
-                    lblOrderTotal.Location = new Point(450, 510);
-                    this.Controls.Add(lblOrderTotal);
+                    lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
+                    lblOrderTotal.Visible = true;
                 }
-                
-                // Update the label text and make sure it's visible
-                lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
-                lblOrderTotal.Visible = true;
-                lblOrderTotal.BringToFront();
-                
-                Console.WriteLine($"Order total calculated: €{orderTotal:0.00}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error in RefreshOrderItems: {ex.Message}");
                 MessageBox.Show($"Error refreshing order items: {ex.Message}", 
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        // Helper methods to safely get properties
+        private string GetItemName(OrderItem item)
+        {
+            try
+            {
+                // Try standard property
+                if (item.MenuItemId != null)
+                    return item.MenuItemId.Name;
+                    
+                // Try extended property if it exists
+                var property = item.GetType().GetProperty("ItemName");
+                if (property != null)
+                    return (string)property.GetValue(item) ?? "Unknown Item";
+                    
+                return "Unknown Item";
+            }
+            catch
+            {
+                return "Unknown Item";
+            }
+        }
+
+        private decimal GetItemPrice(OrderItem item)
+        {
+            try
+            {
+                // Try standard property
+                if (item.MenuItemId != null)
+                    return item.MenuItemId.Price;
+                    
+                // Try extended property if it exists
+                var property = item.GetType().GetProperty("ItemPrice");
+                if (property != null)
+                    return (decimal)property.GetValue(item);
+                
+                return 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private string GetItemStatus(OrderItem item)
+        {
+            try
+            {
+                // Try to get the status using reflection
+                var property = item.GetType().GetProperty("Status");
+                if (property != null)
+                    return property.GetValue(item)?.ToString() ?? "Unknown Status";
+                    
+                // Try ItemStatus as an alternative name
+                property = item.GetType().GetProperty("ItemStatus");
+                if (property != null)
+                    return property.GetValue(item)?.ToString() ?? "Unknown Status";
+                    
+                return "Unknown Status";
+            }
+            catch
+            {
+                return "Unknown Status";
             }
         }
         
