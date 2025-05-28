@@ -410,7 +410,7 @@ namespace ChapeauG5
                 // If we created a table but never added items to it, we should make it available again
                 if (!isExistingOrder)
                 {
-                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Available);
+                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Free);
                 }
             }
             catch (Exception ex) {

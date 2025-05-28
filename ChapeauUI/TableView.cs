@@ -54,7 +54,7 @@ namespace ChapeauG5
                 btnTable.FlatAppearance.BorderSize = 0; // Remove border completelyy
                 
                 // Style the button based on the table status
-                if (table.Status == TableStatus.Available)
+                if (table.Status == TableStatus.Free)
                 {
                     btnTable.BackColor = Color.LightGreen;
                     // No border color needed since border size is 0
