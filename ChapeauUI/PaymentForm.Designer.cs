@@ -210,8 +210,9 @@ namespace ChapeauG5
             
             this.pnlPayment.Controls.Add(this.grpPaymentMethod);
             this.pnlPayment.Controls.Add(this.grpFeedback);
-            
+
             // Buttons
+            /*
             this.btnSplitBill = new Button();
             this.btnSplitBill.Location = new Point(600, 60);
             this.btnSplitBill.Size = new Size(150, 40);
@@ -224,6 +225,7 @@ namespace ChapeauG5
             this.btnProcessPayment.Text = "Process Payment";
             this.btnProcessPayment.BackColor = Color.LightGreen;
             this.btnProcessPayment.Click += new EventHandler(this.btnProcessPayment_Click);
+            */
             
             // Add controls to form
             this.Controls.Add(this.lvInvoiceItems);

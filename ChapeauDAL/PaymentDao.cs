@@ -13,20 +13,16 @@ namespace ChapeauDAL
         public int RegisterPayment(Payment payment)
         {
             // Query to insert a new payment record and return its ID
-            // Uses parameterized query to prevent SQL injection
             string query = @"INSERT INTO Payments 
                           (invoice_id, feedback, payment_method, total_price, vat_percentage, tip_amount, final_amount) 
                           VALUES (@InvoiceId, @Feedback, @PaymentMethod, @TotalPrice, @VatPercentage, @TipAmount, @FinalAmount);
                           SELECT SCOPE_IDENTITY();";
             
-            // Create parameters for each field in the payment object
             // This prevents SQL injection and ensures type safety
             SqlParameter[] parameters = new SqlParameter[]
             {
                 new SqlParameter("@InvoiceId", payment.InvoiceId),
-                // Handle null feedback by converting to DBNull if needed
                 new SqlParameter("@Feedback", payment.Feedback ?? (object)DBNull.Value),
-                // Convert the enum to an integer for storage
                 new SqlParameter("@PaymentMethod", (int)payment.PaymentMethod),
                 new SqlParameter("@TotalPrice", payment.TotalPrice),
                 new SqlParameter("@VatPercentage", payment.VatPercentage),
@@ -41,7 +37,6 @@ namespace ChapeauDAL
         // Retrieves all payments associated with a specific invoice.
         public List<Payment> GetPaymentsByInvoiceId(int invoiceId)
         {
-            // Query to find all payments for a specific invoice
             string query = "SELECT * FROM Payments WHERE invoice_id = @InvoiceId";
             SqlParameter[] parameters = { new SqlParameter("@InvoiceId", invoiceId) };
             
@@ -63,12 +58,10 @@ namespace ChapeauDAL
                 {
                     PaymentId = (int)dr["payment_id"],
                     InvoiceId = (int)dr["invoice_id"],
-                    // Handle null feedback values by providing an empty string instead
                     Feedback = dr["feedback"] != DBNull.Value ? (string)dr["feedback"] : string.Empty,
-                    // Convert the integer back to the PaymentMethod enum
                     PaymentMethod = (PaymentMethod)(int)dr["payment_method"],
                     TotalPrice = (decimal)dr["total_price"],
-                    VatPercentage = (decimal)dr["vat_percentage"],
+                    VatPercentage = (int)dr["vat_percentage"],
                     TipAmount = (decimal)dr["tip_amount"],
                     FinalAmount = (decimal)dr["final_amount"]
                 };
