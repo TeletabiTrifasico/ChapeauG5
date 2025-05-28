@@ -133,38 +133,54 @@ namespace ChapeauG5
         
         private void RefreshOrderItems()
         {
-            orderItems = orderService.GetOrderItemsByOrderId(currentOrderId);
-            
-            lvOrderItems.Items.Clear();
-            decimal orderTotal = 0;
-            
-            foreach (OrderItem item in orderItems)
+            try
             {
-                ListViewItem lvi = new ListViewItem(item.ItemName);
-                lvi.SubItems.Add(item.Quantity.ToString());
-                lvi.SubItems.Add($"€{item.ItemPrice:0.00}");
+                orderItems = orderService.GetOrderItemsByOrderId(currentOrderId);
                 
-                decimal subtotal = item.Quantity * item.ItemPrice;
-                lvi.SubItems.Add($"€{subtotal:0.00}");
+                lvOrderItems.Items.Clear();
+                decimal orderTotal = 0;
                 
-                lvi.SubItems.Add(item.Status);
-                lvi.SubItems.Add(item.Comment);
-                lvi.Tag = item;
+                foreach (OrderItem item in orderItems)
+                {
+                    ListViewItem lvi = new ListViewItem(item.ItemName);
+                    lvi.SubItems.Add(item.Quantity.ToString());
+                    lvi.SubItems.Add($"€{item.ItemPrice:0.00}");
+                    
+                    decimal subtotal = item.Quantity * item.ItemPrice;
+                    lvi.SubItems.Add($"€{subtotal:0.00}");
+                    
+                    lvi.SubItems.Add(item.Status);
+                    lvi.SubItems.Add(item.Comment);
+                    lvi.Tag = item;
+                    
+                    lvOrderItems.Items.Add(lvi);
+                    
+                    orderTotal += subtotal;
+                }
                 
-                lvOrderItems.Items.Add(lvi);
+                // Ensure the order total label exists and is properly configured
+                if (lblOrderTotal == null)
+                {
+                    lblOrderTotal = new Label();
+                    lblOrderTotal.Size = new Size(250, 30);
+                    lblOrderTotal.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                    lblOrderTotal.ForeColor = Color.DarkBlue;
+                    lblOrderTotal.Location = new Point(450, 510);
+                    this.Controls.Add(lblOrderTotal);
+                }
                 
-                orderTotal += subtotal;
+                // Update the label text and make sure it's visible
+                lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
+                lblOrderTotal.Visible = true;
+                lblOrderTotal.BringToFront();
+                
+                Console.WriteLine($"Order total calculated: €{orderTotal:0.00}");
             }
-            
-            // Update the order total label
-            lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
-            lblOrderTotal.Visible = true;
-            lblOrderTotal.Font = new Font("Segoe UI", 12, FontStyle.Bold);
-            lblOrderTotal.ForeColor = Color.DarkBlue;
-            
-            lblOrderTotal.BringToFront();
-            
-            Console.WriteLine($"Order total calculated: €{orderTotal:0.00}");
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing order items: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void btnPayment_Click(object sender, EventArgs e)

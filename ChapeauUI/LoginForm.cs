@@ -98,7 +98,7 @@ namespace ChapeauG5
                     break;
                 */
                 default:
-                    formToShow = new Form1();
+                    formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
             }
             
