@@ -210,10 +210,17 @@ namespace ChapeauG5
                     }
                 }
                 
-                // If we're closing without having saved an order, reset the table status
+                // Only reset table status if we opened a new order view but never saved it
                 if (!isExistingOrder)
                 {
-                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Available);
+                    // Instead of getting the current table, just check if there's an active order
+                    Order activeOrder = orderService.GetOrderByTableId(selectedTable.TableId);
+                    
+                    // Only change status if there's no active order for this table
+                    if (activeOrder == null)
+                    {
+                        tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Available);
+                    }
                 }
             }
             catch (Exception ex)

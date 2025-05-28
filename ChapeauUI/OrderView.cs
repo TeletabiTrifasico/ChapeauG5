@@ -243,7 +243,7 @@ namespace ChapeauG5
                 MessageBox.Show("Order saved successfully!", "Success", 
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 
-                // Refresh the order from the database
+                // Refresh the order from the database with full MenuItem details
                 orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
                 RefreshOrderItemsView();
             }
