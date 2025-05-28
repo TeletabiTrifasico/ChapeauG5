@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
 using Microsoft.Data.SqlClient;
@@ -14,12 +12,24 @@ namespace ChapeauDAL
     {
         // The database connection string loaded from App.config
         protected readonly string connectionString;
+        private SqlDataAdapter adapter;
 
         // Initializes the connection string from App.config
         protected BaseDao()
         {
-            // Get connection string from App.config using the "ChapeauG5DB" key this has to be the same as in the App.config file
-            connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5DB"].ConnectionString;
+            try
+            {
+                // Use ConfigurationManager to get connection string from app.config
+                connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5Db"].ConnectionString;
+            }
+            catch (ConfigurationErrorsException)
+            {
+                // Fallback connection string if config is missing
+                connectionString = "Data Source=.;Initial Catalog=ChapeauG5Db;Integrated Security=True";
+            }
+            
+            // Initialize adapter for sync methods
+            adapter = new SqlDataAdapter();
         }
 
         // Creates a new SQL Server connection using the stored connection string
@@ -28,8 +38,10 @@ namespace ChapeauDAL
             return new SqlConnection(connectionString);
         }
 
-        // Executes a SQL query that returns a single value (like COUNT, SUM, etc.)
-        protected async Task<T> ExecuteScalarAsync<T>(string query, params SqlParameter[] parameters)
+        #region Async Methods
+
+        // Executes a SQL query that returns a single row and maps it to an object
+        protected async Task<T> ExecuteQuerySingleAsync<T>(string query, Func<SqlDataReader, T> mapper, params SqlParameter[] parameters)
         {
             using var connection = GetConnection();
             using var command = new SqlCommand(query, connection);
@@ -38,22 +50,14 @@ namespace ChapeauDAL
                 command.Parameters.AddRange(parameters);
 
             await connection.OpenAsync();
-            var result = await command.ExecuteScalarAsync();
+            using var reader = await command.ExecuteReaderAsync();
 
-            return result != DBNull.Value ? (T)result : default(T);
-        }
+            if (await reader.ReadAsync())
+            {
+                return mapper(reader);
+            }
 
-        // Executes a SQL query that doesn't return data (INSERT, UPDATE, DELETE)
-        protected async Task<int> ExecuteNonQueryAsync(string query, params SqlParameter[] parameters)
-        {
-            using var connection = GetConnection();
-            using var command = new SqlCommand(query, connection);
-
-            if (parameters != null)
-                command.Parameters.AddRange(parameters);
-
-            await connection.OpenAsync();
-            return await command.ExecuteNonQueryAsync();
+            return default(T);
         }
 
         // Executes a SQL query that returns multiple rows and maps them to objects
@@ -78,9 +82,8 @@ namespace ChapeauDAL
             return results;
         }
 
-        // Executes a SQL query that returns a single row and maps it to an object
-        // Useful for queries like "SELECT * FROM table WHERE id = @id"
-        protected async Task<T> ExecuteQuerySingleAsync<T>(string query, Func<SqlDataReader, T> mapper, params SqlParameter[] parameters)
+        // Executes a SQL query that doesn't return data (INSERT, UPDATE, DELETE)
+        protected async Task<int> ExecuteNonQueryAsync(string query, params SqlParameter[] parameters)
         {
             using var connection = GetConnection();
             using var command = new SqlCommand(query, connection);
@@ -89,22 +92,12 @@ namespace ChapeauDAL
                 command.Parameters.AddRange(parameters);
 
             await connection.OpenAsync();
-            using var reader = await command.ExecuteReaderAsync();
-
-            if (await reader.ReadAsync())
-            {
-                return mapper(reader);
-            }
-
-            return default(T);
+            return await command.ExecuteNonQueryAsync();
         }
 
-        // Executes a SQL query and returns the results as a DataTable
-        // Useful for scenarios where you need tabular data
-        protected async Task<DataTable> ExecuteQueryToDataTableAsync(string query, params SqlParameter[] parameters)
+        // Executes a SQL query that returns a single value (like COUNT, SUM, etc.)
+        protected async Task<T> ExecuteScalarAsync<T>(string query, params SqlParameter[] parameters)
         {
-            var dataTable = new DataTable();
-
             using var connection = GetConnection();
             using var command = new SqlCommand(query, connection);
 
@@ -112,62 +105,70 @@ namespace ChapeauDAL
                 command.Parameters.AddRange(parameters);
 
             await connection.OpenAsync();
-            using var reader = await command.ExecuteReaderAsync();
-            
-            dataTable.Load(reader);
+            var result = await command.ExecuteScalarAsync();
 
-            return dataTable;
+            return result != DBNull.Value ? (T)result : default(T);
         }
 
-        // Executes multiple SQL commands within a single transaction
-        // If any operation fails, the entire transaction is rolled back
-        protected async Task<bool> ExecuteTransactionAsync(Func<SqlConnection, SqlTransaction, Task<bool>> operations)
+        #endregion
+
+        #region Synchronous Methods
+
+        /* For SELECT queries returning multiple records */
+        protected DataTable ExecuteSelectQuery(string query, SqlParameter[] sqlParameters)
         {
-            using var connection = GetConnection();
-            await connection.OpenAsync();
-
-            using var transaction = connection.BeginTransaction();
-            try
+            using (SqlConnection conn = GetConnection())
             {
-                var success = await operations(connection, transaction);
-
-                if (success)
-                {
-                    // If operations returned true, commit the transaction
-                    await transaction.CommitAsync();
-                    return true;
-                }
-                else
-                {
-                    // If operations returned false, roll back the transaction
-                    await transaction.RollbackAsync();
-                    return false;
-                }
-            }
-            catch
-            {
-                // If any exception occurs, roll back the transaction
-                await transaction.RollbackAsync();
-                return false;
+                SqlCommand command = new SqlCommand(query, conn);
+                if (sqlParameters != null)
+                    command.Parameters.AddRange(sqlParameters);
+                
+                DataTable dataTable = new DataTable();
+                adapter.SelectCommand = command;
+                
+                conn.Open();
+                adapter.Fill(dataTable);
+                
+                return dataTable;
             }
         }
 
-        // Creates a SQL parameter with a name and value
-        // Handles null values by converting them to DBNull.Value
+        /* For INSERT queries returning the ID of the new record */
+        protected int ExecuteInsertQuery(string query, SqlParameter[] sqlParameters)
+        {
+            using (SqlConnection conn = GetConnection())
+            {
+                SqlCommand command = new SqlCommand(query, conn);
+                if (sqlParameters != null)
+                    command.Parameters.AddRange(sqlParameters);
+                
+                conn.Open();
+                int id = Convert.ToInt32(command.ExecuteScalar());
+                
+                return id;
+            }
+        }
+
+        /* For UPDATE and DELETE queries */
+        protected void ExecuteEditQuery(string query, SqlParameter[] sqlParameters)
+        {
+            using (SqlConnection conn = GetConnection())
+            {
+                SqlCommand command = new SqlCommand(query, conn);
+                if (sqlParameters != null)
+                    command.Parameters.AddRange(sqlParameters);
+                
+                conn.Open();
+                command.ExecuteNonQuery();
+            }
+        }
+
+        #endregion
+
+        // Helper method to create SQL parameters with null handling
         protected SqlParameter CreateParameter(string name, object value)
         {
             return new SqlParameter(name, value ?? DBNull.Value);
-        }
-
-        // Creates a SQL parameter with a name, value, and specific SQL data type
-        // Use this when you need to control the exact SQL type (date/time or decimal values)
-        protected SqlParameter CreateParameter(string name, object value, SqlDbType sqlDbType)
-        {
-            var parameter = new SqlParameter(name, sqlDbType)
-            {
-                Value = value ?? DBNull.Value
-            };
-            return parameter;
         }
     }
 }

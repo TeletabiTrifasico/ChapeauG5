@@ -99,15 +99,14 @@ namespace ChapeauG5
 
             // Here is where we change forms based on role
 
-            /*
-            //Example:
             Form formToShow;
             
             switch (role)
             {
                 case EmployeeRole.Waiter:
-                    formToShow = new Form1(); // Your waiter dashboard
+                    formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
+                /*
                 case EmployeeRole.Bar:
                     formToShow = new BarDashboardForm(); // Create this form
                     break;
@@ -117,12 +116,14 @@ namespace ChapeauG5
                 case EmployeeRole.Manager:
                     formToShow = new ManagerDashboardForm(); // Create this form
                     break;
+                */
                 default:
-                    formToShow = new Form1();
+                    formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
             }
             */
 
+            
             // Set the form's start position and size
             formToShow.StartPosition = FormStartPosition.CenterScreen;
             formToShow.FormClosed += (s, args) => this.Close();
