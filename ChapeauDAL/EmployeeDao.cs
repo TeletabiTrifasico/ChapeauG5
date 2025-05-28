@@ -48,7 +48,98 @@ namespace ChapeauDAL
             
             return employee;
         }
-        
+
+
+
+        //Boozie Stuff
+        public List<Employee> GetAllEmployees()
+        {
+            List<Employee> employees = new List<Employee>();
+            string query = "SELECT * FROM Employee";
+
+            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        employees.Add(new Employee
+                        {
+                            EmployeeId = (int)reader["employee_id"],
+                            Username = reader["username"].ToString()!,
+                            PasswordHash = reader["password"].ToString()!,
+                            FirstName = reader["first_name"].ToString()!,
+                            LastName = reader["last_name"].ToString()!,
+                            PhoneNumber = reader["phone_number"] as string,
+                            Role = ParseEmployeeRole(reader["role"].ToString()!),
+                            Email = reader["email"].ToString()!,
+                            IsActive = (bool)reader["is_active"],
+                        });
+                    }
+                }
+            }
+            return employees;
+        }
+
+        public void AddEmployee(Employee employee)
+        {
+            string query = "INSERT INTO Employee (first_name, last_name, username, password, role, is_active) VALUES (@first_name, @last_name, @username, @password, @role, 1)";
+            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
+                {
+                    cmd.Parameters.AddWithValue("@first_name", employee.FirstName);
+                    cmd.Parameters.AddWithValue("@last_name", employee.LastName);
+                    cmd.Parameters.AddWithValue("@username", employee.Username);
+                    cmd.Parameters.AddWithValue("@password", employee.PasswordHash);
+                    cmd.Parameters.AddWithValue("@role", employee.Role);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void UpdateEmployee(Employee employee)
+        {
+            string query = "UPDATE Employee SET first_name = @first_name, last_name = @last_name, username = @username, password = @password, role = @role WHERE employee_id = @employee_id";
+            using (SqlConnection conn = GetConnection()) // Added missing declaration for 'conn'
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@first_name", employee.FirstName);
+                    cmd.Parameters.AddWithValue("@last_name", employee.LastName);
+                    cmd.Parameters.AddWithValue("@username", employee.Username);
+                    cmd.Parameters.AddWithValue("@password", employee.PasswordHash);
+                    cmd.Parameters.AddWithValue("@role", employee.Role);
+                    cmd.Parameters.AddWithValue("@employee_id", employee.EmployeeId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void SetEmployeeActiveStatus(int employeeId, bool isActive)
+        {
+            string query = "UPDATE Employee SET is_active = @is_active WHERE employee_id = @employee_id";
+            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
+                {
+                    cmd.Parameters.AddWithValue("@is_active", isActive);
+                    cmd.Parameters.AddWithValue("@employee_id", employeeId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+
+
+
+
+
         // Parse string role to enum
         private EmployeeRole ParseEmployeeRole(string role)
         {
