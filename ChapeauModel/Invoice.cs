@@ -71,7 +71,7 @@ namespace ChapeauModel
                         Subtotal = Math.Round(item.UnitPrice * quantityForInvoice, 2),
                         
                         // Calculate VAT amount based on subtotal and VAT percentage
-                        VatAmount = Math.Round(item.UnitPrice * quantityForInvoice * (item.VatPercentage / 100), 2),
+                        VatAmount = Math.Round(item.UnitPrice * quantityForInvoice * (item.VatPercentage / 100m), 2),
                         
                         // Preserve the alcoholic status (important for different VAT rates)
                         IsAlcoholic = item.IsAlcoholic

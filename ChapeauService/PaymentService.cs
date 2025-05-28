@@ -18,30 +18,30 @@ namespace ChapeauService
         
         public Invoice GetInvoice(int orderId)
         {
-            // Check if invoice already exists
-            Invoice invoice = invoiceDao.GetInvoiceByOrderId(orderId);
+            // First check if an invoice already exists
+            Invoice existingInvoice = invoiceDao.GetInvoiceByOrderId(orderId);
             
-            if (invoice == null)
+            if (existingInvoice != null)
             {
-                // Generate a new invoice based on order items
-                invoice = invoiceDao.GenerateInvoiceForOrder(orderId);
-                
-                // Save the invoice to the database
-                int invoiceId = invoiceDao.CreateInvoice(invoice);
-                invoice.InvoiceId = invoiceId;
+                // Load payments for this invoice
+                existingInvoice.Payments = paymentDao.GetPaymentsByInvoiceId(existingInvoice.InvoiceId);
+                return existingInvoice;
             }
             
-            // Load the invoice items
-            if (invoice.Items.Count == 0)
+            // Generate a new invoice from order items
+            Invoice newInvoice = invoiceDao.GenerateInvoiceForOrder(orderId);
+            
+            // If there are no items or all items are zero, there's an issue
+            if (newInvoice.Items.Count == 0 || newInvoice.TotalAmount <= 0)
             {
-                Invoice detailedInvoice = invoiceDao.GenerateInvoiceForOrder(orderId);
-                invoice.Items = detailedInvoice.Items;
+                return null;
             }
             
-            // Load any existing payments
-            invoice.Payments = paymentDao.GetPaymentsByInvoiceId(invoice.InvoiceId);
+            // Save the new invoice to the database
+            newInvoice.InvoiceId = invoiceDao.CreateInvoice(newInvoice);
+            newInvoice.Payments = new List<Payment>();
             
-            return invoice;
+            return newInvoice;
         }
         
         public List<Invoice> SplitInvoice(Invoice invoice, int numberOfPeople)

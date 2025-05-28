@@ -17,7 +17,7 @@ namespace ChapeauModel
         public string Feedback { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public decimal TotalPrice { get; set; }
-        public decimal VatPercentage { get; set; }
+        public int VatPercentage { get; set; }
         public decimal TipAmount { get; set; }
         public decimal FinalAmount { get; set; }
         public int EmployeeId { get; set; }

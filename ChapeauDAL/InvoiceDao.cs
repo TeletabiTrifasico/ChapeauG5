@@ -93,9 +93,9 @@ namespace ChapeauDAL
             string query = @"
                 SELECT o.order_id, o.employee_id, oi.order_item_id, oi.menu_item_id, oi.quantity, oi.comment,
                        mi.name as item_name, mi.price, mi.vat_percentage, di.is_alcoholic
-                FROM Orders o
-                JOIN Order_items oi ON o.order_id = oi.order_id
-                JOIN Menu_items mi ON oi.menu_item_id = mi.menu_item_id
+                FROM [Order] o
+                JOIN Order_Item oi ON o.order_id = oi.order_id
+                JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
                 LEFT JOIN Drink_Item di ON mi.menu_item_id = di.menu_item_id
                 WHERE o.order_id = @OrderId AND oi.status = 'Served'";
             
@@ -116,8 +116,8 @@ namespace ChapeauDAL
             foreach (DataRow dr in dataTable.Rows)
             {
                 // Extract values from the row
-                decimal vatPercentage = (decimal)dr["vat_percentage"];
-                decimal price = (decimal)dr["price"];
+                int vatPercentage = (int)dr["vat_percentage"];
+                decimal price = Convert.ToDecimal(dr["price"]);
                 int quantity = (int)dr["quantity"];
                 
                 // Check if item is alcoholic (for special VAT rules)
@@ -126,7 +126,7 @@ namespace ChapeauDAL
                 
                 // Calculate item totals
                 decimal itemSubtotal = price * quantity;
-                decimal itemVat = itemSubtotal * (vatPercentage / 100);
+                decimal itemVat = itemSubtotal * (vatPercentage / 100m);
                 
                 // Create an InvoiceItem object to represent this line item
                 InvoiceItem item = new InvoiceItem()
