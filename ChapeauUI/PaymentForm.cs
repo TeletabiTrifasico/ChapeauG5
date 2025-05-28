@@ -24,22 +24,46 @@ namespace ChapeauG5
         
         private void PaymentForm_Load(object sender, EventArgs e)
         {
-            // Load the invoice information
-            invoice = paymentService.GetInvoice(orderId);
-            DisplayInvoice();
-            
-            // Check if invoice already has payments
-            if (invoice.Payments.Count > 0)
+            try
             {
-                ShowExistingPayments();
+                // Load the invoice information
+                invoice = paymentService.GetInvoice(orderId);
+                
+                if (invoice == null)
+                {
+                    MessageBox.Show("Error: Could not load invoice for this order. The order might not have any served items.", 
+                        "Invoice Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    this.DialogResult = DialogResult.Cancel;
+                    this.Close();
+                    return;
+                }
+                
+                DisplayInvoice();
+                
+                // Check if invoice already has payments
+                if (invoice.Payments.Count > 0)
+                {
+                    ShowExistingPayments();
+                }
+                
+                // Initialize payment method options
+                cmbPaymentMethod.Items.Add("Cash");
+                cmbPaymentMethod.Items.Add("Debit Card");
+                cmbPaymentMethod.Items.Add("Credit Card (VISA)");
+                cmbPaymentMethod.Items.Add("Credit Card (AMEX)");
+                cmbPaymentMethod.SelectedIndex = 0;
+                
+                // Make sure the payment panel is visible
+                pnlPayment.Visible = true;
+                
+                // Log for debugging
+                Console.WriteLine($"Invoice loaded: {invoice.InvoiceId}, Items: {invoice.Items.Count}, Total: {invoice.TotalAmount}");
             }
-            
-            // Initialize payment method options
-            cmbPaymentMethod.Items.Add("Cash");
-            cmbPaymentMethod.Items.Add("Debit Card");
-            cmbPaymentMethod.Items.Add("Credit Card (VISA)");
-            cmbPaymentMethod.Items.Add("Credit Card (AMEX)");
-            cmbPaymentMethod.SelectedIndex = 0;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading payment form: {ex.Message}\n\n{ex.StackTrace}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private void DisplayInvoice()
@@ -154,9 +178,15 @@ namespace ChapeauG5
                 
                 // Get tip amount
                 decimal tipAmount = 0;
-                if (!string.IsNullOrEmpty(txtTipAmount.Text))
+                if (decimal.TryParse(txtTipAmount.Text, out tipAmount))
                 {
-                    tipAmount = decimal.Parse(txtTipAmount.Text);
+                    // Valid decimal input
+                }
+                else
+                {
+                    MessageBox.Show("Please enter a valid tip amount.", "Invalid Input", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
                 
                 // Get feedback
@@ -196,7 +226,7 @@ namespace ChapeauG5
                     Feedback = feedback,
                     PaymentMethod = paymentMethod,
                     TotalPrice = remainingAmount,
-                    VatPercentage = invoice.TotalVat / invoice.TotalAmount * 100, // Average VAT percentage
+                    VatPercentage = (int)Math.Round(invoice.TotalVat / invoice.TotalAmount * 100, 0), // Average VAT percentage
                     TipAmount = tipAmount,
                     FinalAmount = remainingAmount + tipAmount,
                     EmployeeId = loggedInEmployee.EmployeeId

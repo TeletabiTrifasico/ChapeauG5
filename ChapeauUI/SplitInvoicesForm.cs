@@ -229,7 +229,8 @@ namespace ChapeauG5
                         InvoiceId = originalInvoiceId, // Associate with the original invoice
                         PaymentMethod = paymentMethod,
                         TotalPrice = totalAmount,
-                        VatPercentage = splitInvoice.TotalVat / splitInvoice.TotalAmount * 100, // Average VAT percentage
+                        VatPercentage = splitInvoice.TotalAmount != 0 ? 
+                        (int)Math.Round(splitInvoice.TotalVat / splitInvoice.TotalAmount * 100, 0) : 0,
                         TipAmount = tipAmount,
                         FinalAmount = totalAmount + tipAmount,
                         Feedback = $"Split payment {invoiceIndex + 1} of {splitInvoices.Count}",
