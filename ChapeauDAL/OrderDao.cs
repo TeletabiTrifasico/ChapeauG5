@@ -188,5 +188,42 @@ namespace ChapeauDAL
             
             ExecuteEditQuery(query, parameters);
         }
+
+        public List<TableOrderStatus> GetTableOrderStatuses()
+        {
+            string query = @"
+        SELECT 
+            t.table_id, 
+            t.table_number,
+            CASE WHEN o.order_id IS NOT NULL THEN 1 ELSE 0 END AS has_running_order,
+            MAX(CASE WHEN m.menu_card IN ('Lunch', 'Dinner') THEN oi.status END) AS food_status,
+            MAX(CASE WHEN m.menu_card = 'Drinks' THEN oi.status END) AS drink_status
+        FROM [Table] t
+        LEFT JOIN [Order] o ON t.table_id = o.table_id AND o.is_done = 0
+        LEFT JOIN Order_Item oi ON o.order_id = oi.order_id
+        LEFT JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
+        LEFT JOIN Menu m ON mi.category_id = m.category_id
+        GROUP BY t.table_id, t.table_number, o.order_id
+        ORDER BY t.table_number";
+
+            DataTable dt = ExecuteSelectQuery(query,null);
+
+            List<TableOrderStatus> result = new List<TableOrderStatus>();
+            foreach (DataRow dr in dt.Rows)
+            {
+                result.Add(new TableOrderStatus
+                {
+                    TableId = (int)dr["table_id"],
+                    TableNumber = (int)dr["table_number"],
+                    HasRunningOrder = (int)dr["has_running_order"] == 1,
+                    FoodOrderStatus = dr["food_status"] != DBNull.Value ? dr["food_status"].ToString() : null,
+                    DrinkOrderStatus = dr["drink_status"] != DBNull.Value ? dr["drink_status"].ToString() : null
+                });
+            }
+            return result;
+        }
+    
+
+
     }
 }
