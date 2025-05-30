@@ -39,7 +39,7 @@ namespace ChapeauG5
                 var loginTask = authService.LoginAsync(txtUsername.Text, txtPassword.Text);
                 
                 // Add timeout to prevent indefinite freezing
-                var timeoutTask = Task.Delay(10000); // 10 second timeout
+                var timeoutTask = Task.Delay(20000); // 10 second timeout
                 
                 if (await Task.WhenAny(loginTask, timeoutTask) == timeoutTask)
                 {
