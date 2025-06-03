@@ -35,22 +35,23 @@ namespace ChapeauG5
             this.components = new System.ComponentModel.Container();
             
             this.Text = "Chapeau - Table View";
-            this.Size = new Size(800, 600);
+            this.Size = new Size(1500, 1300);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             
             // Welcome Label
             this.lblWelcome = new Label();
-            this.lblWelcome.Location = new Point(20, 20);
-            this.lblWelcome.Size = new Size(400, 30);
+            this.lblWelcome.Location = new Point(20, 60);
+            this.lblWelcome.Size = new Size(400, 60);
             this.lblWelcome.Font = new Font("Segoe UI", 14, FontStyle.Bold);
             this.lblWelcome.Text = "Welcome!";
             
             // Logout Button
             this.btnLogout = new Button();
-            this.btnLogout.Location = new Point(680, 20);
-            this.btnLogout.Size = new Size(80, 30);
+            this.btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnLogout.Location = new Point(this.ClientSize.Width - 140, 20);
+            this.btnLogout.Size = new Size(120, 80);
             this.btnLogout.Text = "Logout";
             this.btnLogout.BackColor = Color.LightGray;
             this.btnLogout.Click += new EventHandler(this.btnLogout_Click);
@@ -58,7 +59,7 @@ namespace ChapeauG5
             // Tables Panel - TableLayoutPanel configuration
             this.tlpTables = new TableLayoutPanel();
             this.tlpTables.Location = new Point(50, 80); // Positioned more centrally
-            this.tlpTables.Size = new Size(700, 400); // Wider to ensure equal spacing
+            this.tlpTables.Size = new Size(1400, 900); // Wider to ensure equal spacing
             this.tlpTables.Anchor = AnchorStyles.None;
             this.tlpTables.AutoSize = false;
             this.tlpTables.ColumnCount = 5;

@@ -47,9 +47,12 @@ namespace ChapeauG5
                 
                 Button btnTable = new Button();
                 btnTable.Text = $"Table {table.TableNumber}";
-                btnTable.Size = new Size(100, 100); // Consistent square size
+                btnTable.Size = new Size(200, 200); // Adjust size for better visibility
                 btnTable.Tag = table;
+
                 
+                
+
                 // Use Anchor instead of Dock for centering
                 btnTable.Dock = DockStyle.None;
                 btnTable.Anchor = AnchorStyles.None; // This centers the button in its cell
