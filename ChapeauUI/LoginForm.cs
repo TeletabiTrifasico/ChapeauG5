@@ -14,6 +14,7 @@ namespace ChapeauG5
         {
             InitializeComponent();
             authService = new AuthenticationService();
+            pictureBoxLogo.Image = Image.FromFile(@"C:\Users\hugoj\Desktop\websites\ChapeauG5\logo.png");
         }
         
         private async void btnLogin_Click(object sender, EventArgs e)
@@ -39,7 +40,7 @@ namespace ChapeauG5
                 var loginTask = authService.LoginAsync(txtUsername.Text, txtPassword.Text);
                 
                 // Add timeout to prevent indefinite freezing
-                var timeoutTask = Task.Delay(10000); // 10 second timeout
+                var timeoutTask = Task.Delay(20000); // 10 second timeout
                 
                 if (await Task.WhenAny(loginTask, timeoutTask) == timeoutTask)
                 {

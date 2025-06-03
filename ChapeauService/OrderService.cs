@@ -79,5 +79,11 @@ namespace ChapeauService
         {
             orderDao.DeleteOrderItem(orderItemId);
         }
+
+        public List<TableOrderStatus> GetTableOrderStatuses()
+        {
+            return orderDao.GetTableOrderStatuses();
+        }
+
     }
 }

@@ -9,6 +9,7 @@ namespace ChapeauG5
 {
     public partial class TableView : Form
     {
+        private OrderService orderService;
         private TableService tableService;
         private Employee loggedInEmployee;
         private List<Button> tableButtons;
@@ -19,7 +20,8 @@ namespace ChapeauG5
             loggedInEmployee = employee;
             tableService = new TableService();
             tableButtons = new List<Button>();
-            
+            orderService = new OrderService();
+
             lblWelcome.Text = $"Welcome, {employee.FirstName}!";
         }
         
@@ -34,7 +36,8 @@ namespace ChapeauG5
             tableButtons.Clear();
             
             List<Table> tables = tableService.GetAllTables();
-            
+            List<TableOrderStatus> tableOrderStatuses = orderService.GetTableOrderStatuses();
+
             // Calculate positions to create a 5x2 grid
             int maxTables = Math.Min(tables.Count, 10); // Maximum of 10 tables in a 5x2 grid
             
@@ -44,9 +47,12 @@ namespace ChapeauG5
                 
                 Button btnTable = new Button();
                 btnTable.Text = $"Table {table.TableNumber}";
-                btnTable.Size = new Size(100, 100); // Consistent square size
+                btnTable.Size = new Size(200, 200); // Adjust size for better visibility
                 btnTable.Tag = table;
+
                 
+                
+
                 // Use Anchor instead of Dock for centering
                 btnTable.Dock = DockStyle.None;
                 btnTable.Anchor = AnchorStyles.None; // This centers the button in its cell
@@ -64,7 +70,27 @@ namespace ChapeauG5
                     btnTable.BackColor = Color.LightCoral;
                     // No border color needed since border size is 0
                 }
-                
+
+                //----Order Status Info------
+
+                TableOrderStatus status = tableOrderStatuses.Find(s => s.TableId == table.TableId);
+                if (status != null && status.HasRunningOrder)
+                {
+                    string foodStatus = status.FoodOrderStatus ?? "-";
+                    string drinkStatus = status.DrinkOrderStatus ?? "-";
+                    btnTable.Text += $"\nFood: {foodStatus}\nDrink: {drinkStatus}";
+                }
+                else
+                {
+                    btnTable.Text += "\nNo active order";
+                }
+
+                //----------------
+
+
+
+
+
                 btnTable.Click += BtnTable_Click;
                 tableButtons.Add(btnTable);
                 
