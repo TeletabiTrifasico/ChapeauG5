@@ -152,27 +152,6 @@ namespace ChapeauG5
             // 
             // pictureBoxLogo
             // 
-           /* try
-            {
-                string imagePath = Path.Combine(Application.StartupPath, "logo.png");
-                if (File.Exists(imagePath))
-                {
-                    this.pictureBoxLogo.Image = Image.FromFile(imagePath);
-                }
-                else
-                {
-                    // Try looking in the project directory if not found in output directory
-                    string projectPath = Path.Combine(Directory.GetCurrentDirectory(), "logo.png"); 
-                    if (File.Exists(projectPath))
-                    {
-                        this.pictureBoxLogo.Image = Image.FromFile(projectPath);
-                    }
-                }
-            }
-            catch
-            {
-                // Image couldn't be loaded, leave it as null
-            } */
             this.pictureBoxLogo.Location = new System.Drawing.Point(150, 30);
             this.pictureBoxLogo.Name = "pictureBoxLogo";
             this.pictureBoxLogo.Size = new System.Drawing.Size(100, 100);
