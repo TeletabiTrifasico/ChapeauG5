@@ -35,7 +35,7 @@ namespace ChapeauG5
             this.components = new System.ComponentModel.Container();
             
             this.Text = "Chapeau - Table View";
-            this.Size = new Size(1500, 1300);
+            this.Size = new Size(1200, 900);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -58,8 +58,8 @@ namespace ChapeauG5
             
             // Tables Panel - TableLayoutPanel configuration
             this.tlpTables = new TableLayoutPanel();
-            this.tlpTables.Location = new Point(50, 80); // Positioned more centrally
-            this.tlpTables.Size = new Size(1400, 900); // Wider to ensure equal spacing
+            this.tlpTables.Location = new Point(100, 150); // Positioned more centrally
+            this.tlpTables.Size = new Size(1000, 600); // Wider to ensure equal spacing
             this.tlpTables.Anchor = AnchorStyles.None;
             this.tlpTables.AutoSize = false;
             this.tlpTables.ColumnCount = 5;
