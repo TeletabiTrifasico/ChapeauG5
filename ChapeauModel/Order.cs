@@ -9,5 +9,6 @@ namespace ChapeauModel
         public Employee EmployeeId { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsDone { get; set; }
+        public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }
