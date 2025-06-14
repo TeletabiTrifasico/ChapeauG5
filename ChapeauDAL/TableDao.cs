@@ -46,9 +46,6 @@ namespace ChapeauDAL
                     case TableStatus.Occupied:
                         newStatus = "Occupied"; 
                         break;
-                    case TableStatus.Reserved:
-                        newStatus = "Reserved"; 
-                        break;
                     default:
                         newStatus = "Free"; // Default to Free
                         break;

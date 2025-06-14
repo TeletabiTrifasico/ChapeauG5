@@ -14,7 +14,8 @@ namespace ChapeauG5
         {
             InitializeComponent();
             authService = new AuthenticationService();
-            pictureBoxLogo.Image = Image.FromFile(@"C:\Users\hugoj\Desktop\websites\ChapeauG5\logo.png");
+            //pictureBoxLogo.Image = Image.FromFile(@"C:\Users\hugoj\Desktop\websites\ChapeauG5\logo.png");
+
         }
         
         private async void btnLogin_Click(object sender, EventArgs e)

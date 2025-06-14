@@ -1,9 +1,10 @@
+using ChapeauG5.ChapeauUI;
+using ChapeauModel;
+using ChapeauService;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using ChapeauModel;
-using ChapeauService;
 
 namespace ChapeauG5
 {
@@ -17,7 +18,15 @@ namespace ChapeauG5
         public TableView(Employee employee)
         {
             InitializeComponent();
+
+            if (employee == null)
+            {
+                MessageBox.Show("Employee is null in TableView constructor!");
+            }
+
             loggedInEmployee = employee;
+           
+
             tableService = new TableService();
             tableButtons = new List<Button>();
             orderService = new OrderService();
@@ -51,8 +60,6 @@ namespace ChapeauG5
                 btnTable.Tag = table;
 
                 
-                
-
                 // Use Anchor instead of Dock for centering
                 btnTable.Dock = DockStyle.None;
                 btnTable.Anchor = AnchorStyles.None; // This centers the button in its cell
@@ -84,12 +91,7 @@ namespace ChapeauG5
                 {
                     btnTable.Text += "\nNo active order";
                 }
-
                 //----------------
-
-
-
-
 
                 btnTable.Click += BtnTable_Click;
                 tableButtons.Add(btnTable);
@@ -116,35 +118,53 @@ namespace ChapeauG5
                 return false;
             }
         }
-        
+
         private void BtnTable_Click(object sender, EventArgs e)
         {
             try
             {
                 Button clickedButton = (Button)sender;
                 Table selectedTable = (Table)clickedButton.Tag;
-                
-                if (IsOrderViewImplemented())
+
+                // Order status of the table
+                TableOrderStatus status = orderService.GetTableOrderStatuses()
+                    .Find(s => s.TableId == selectedTable.TableId);
+
+                bool hasOpenOrder = status != null && status.HasRunningOrder; // is_done == false
+
+                if (selectedTable.Status == TableStatus.Free)
                 {
-                    // OrderView exists, try to open it
-                    OrderView orderView = new OrderView(loggedInEmployee, selectedTable);
-                    orderView.FormClosed += (s, args) => RefreshTables();
-                    orderView.Show();
+                    // Open FreeTableManagement, Occcupt button active
+                    var freeForm = new FreeTableManagement(selectedTable);
+                    freeForm.ShowDialog();
+
+                    RefreshTables(); // Refresh the table view after closing the form
+                }
+                else if (selectedTable.Status == TableStatus.Occupied)
+                {
+                    var occupiedForm = new OccupiedTableManagement(loggedInEmployee,selectedTable);
+
+                    // Take Order button
+                    occupiedForm.SetTakeOrderButtonEnabled(true);
+
+                    // Free Table butonu durumu
+                    occupiedForm.SetFreeTableButtonEnabled(!hasOpenOrder);
+                    // if (hasOpenOrder=true), freeTable button is going to be disabled 
+
+                    occupiedForm.ShowDialog();
                 }
                 else
                 {
-                    // OrderView doesn't exist yet, show a message
-                    MessageBox.Show($"Table {selectedTable.TableNumber} selected. OrderView form is not implemented yet.", 
-                        "Development in Progress", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Table status unknown.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", 
+                MessageBox.Show($"An error occurred: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        
+
         private void btnLogout_Click(object sender, EventArgs e)
         {
             this.Close();
