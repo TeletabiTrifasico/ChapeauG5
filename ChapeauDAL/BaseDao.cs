@@ -21,6 +21,7 @@ namespace ChapeauDAL
             {
                 // Use ConfigurationManager to get connection string from app.config
                 connectionString = ConfigurationManager.ConnectionStrings["M_CHAPEAUDB"].ConnectionString;
+               // connectionString = ConfigurationManager.ConnectionStrings["ChapeauG5DBB"].ConnectionString;
             }
             catch (ConfigurationErrorsException)
             {
