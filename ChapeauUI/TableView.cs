@@ -70,28 +70,29 @@ namespace ChapeauG5
                 if (table.Status == TableStatus.Free)
                 {
                     btnTable.BackColor = Color.LightGreen;
+                    btnTable.Text += "\nStatus: Free";
                     // No border color needed since border size is 0
                 }
                 else if (table.Status == TableStatus.Occupied)
                 {
                     btnTable.BackColor = Color.LightCoral;
                     // No border color needed since border size is 0
+
+                    TableOrderStatus status = tableOrderStatuses.Find(s => s.TableId == table.TableId);
+
+
+                    if (status != null && status.HasRunningOrder)
+                    {
+                        string foodStatus = status.FoodOrderStatus ?? "-";
+                        string drinkStatus = status.DrinkOrderStatus ?? "-";
+                        btnTable.Text += $"\nFood: {foodStatus}\nDrink: {drinkStatus}";
+                    }
+                    else
+                    {
+                        btnTable.Text += "\nNo active order";
+                    }
                 }
 
-                //----Order Status Info------
-
-                TableOrderStatus status = tableOrderStatuses.Find(s => s.TableId == table.TableId);
-                if (status != null && status.HasRunningOrder)
-                {
-                    string foodStatus = status.FoodOrderStatus ?? "-";
-                    string drinkStatus = status.DrinkOrderStatus ?? "-";
-                    btnTable.Text += $"\nFood: {foodStatus}\nDrink: {drinkStatus}";
-                }
-                else
-                {
-                    btnTable.Text += "\nNo active order";
-                }
-                //----------------
 
                 btnTable.Click += BtnTable_Click;
                 tableButtons.Add(btnTable);
