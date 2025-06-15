@@ -9,13 +9,18 @@ namespace ChapeauModel
         public string Comment { get; set; }
         public DateTime CreatedAt { get; set; }
         public OrderStatus Status { get; set; }
-    
-        public enum OrderStatus
-        {
-            Ordered,
-            BeingPrepared,
-            ReadyToBeServed,
-            Served,
-        }
+
+        public CourseType? OrderItemCourseType => MenuItemId.CourseType;
+        public int WaitingMinutes => (int)(DateTime.Now - CreatedAt).TotalMinutes;
+
+
+
+    }
+    public enum OrderStatus
+    {
+        Ordered,
+        BeingPrepared,
+        ReadyToBeServed,
+        Served,
     }
 }
