@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ChapeauModel;
 using ChapeauService;
@@ -14,8 +15,72 @@ namespace ChapeauG5
         {
             InitializeComponent();
             authService = new AuthenticationService();
-            //pictureBoxLogo.Image = Image.FromFile(@"C:\Users\hugoj\Desktop\websites\ChapeauG5\logo.png");
+            LoadLogoImage();
+        }
+        
+        private void LoadLogoImage()
+        {
+            try
+            {
+                // Try multiple locations in order of preference
+                string[] possiblePaths = new string[]
+                {
+                    // 1. Look in the output directory (where the exe runs)
+                    "logo.png",
+                    Path.Combine(Application.StartupPath, "logo.png"),
+                    
+                    // 2. Look relative to the output directory
+                    Path.Combine("..", "logo.png"),
+                    
+                    // 3. Look in the project root directory (for development)
+                    Path.Combine("..", "..", "..", "logo.png"),
+                    Path.Combine("..", "..", "..", "..", "logo.png"),
+                    
+                    // 4. Fallback to GitHub URL (if internet is available)
+                    "https://raw.githubusercontent.com/TeletabiTrifasico/ChapeauG5/Hugo/logo.png"
+                };
 
+                // Try each path until we find the image
+                foreach (string path in possiblePaths)
+                {
+                    try
+                    {
+                        if (path.StartsWith("http"))
+                        {
+                            // Download from URL
+                            using (var webClient = new System.Net.WebClient())
+                            {
+                                byte[] data = webClient.DownloadData(path);
+                                using (var ms = new MemoryStream(data))
+                                {
+                                    pictureBoxLogo.Image = Image.FromStream(ms);
+                                    Console.WriteLine($"Logo loaded from URL: {path}");
+                                    return;
+                                }
+                            }
+                        }
+                        else if (File.Exists(path))
+                        {
+                            // Load from file system
+                            pictureBoxLogo.Image = Image.FromFile(path);
+                            Console.WriteLine($"Logo loaded from: {path}");
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // Continue to the next path if this one fails
+                        continue;
+                    }
+                }
+
+                // If we get here, we couldn't find the logo in any location
+                Console.WriteLine("Could not find logo image in any standard location");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading logo: {ex.Message}");
+            }
         }
         
         private async void btnLogin_Click(object sender, EventArgs e)
