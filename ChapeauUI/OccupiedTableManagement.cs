@@ -28,13 +28,7 @@ namespace ChapeauG5.ChapeauUI
                 throw new ArgumentNullException("Employee or Table is null");
             }
 
-           
-
-
             lbltabelNumber.Text = $"Table {currentTable.TableNumber}";
-
-            // Butonları başlangıçta aktif/pasif yapmak için metodlar kullanılır
-            // Dışarıdan set edilecek, o yüzden burada sadece temel setup
         }
 
 
@@ -53,6 +47,22 @@ namespace ChapeauG5.ChapeauUI
         private void freeTablebtn_Click(object sender, EventArgs e)
         {
 
+            try
+            {
+                // TableService instance
+                var tableService = new ChapeauService.TableService();
+
+                // Update the table status as Free  
+                tableService.UpdateTableStatus(currentTable.TableId, ChapeauModel.TableStatus.Free);
+
+                MessageBox.Show("Table has been set to Free.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error freeing table: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
         }
 

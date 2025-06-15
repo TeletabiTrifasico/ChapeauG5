@@ -152,6 +152,7 @@ namespace ChapeauG5
                     occupiedForm.SetFreeTableButtonEnabled(!hasOpenOrder);
                     // if (hasOpenOrder=true), freeTable button is going to be disabled 
 
+                    occupiedForm.FormClosed += (s, args) => RefreshTables();
                     occupiedForm.ShowDialog();
                 }
                 else
