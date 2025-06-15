@@ -49,7 +49,7 @@ namespace ChapeauService
                 Comment = comment,
                 CreatedAt = DateTime.Now,
                 // Use the enum value instead of string
-                Status = OrderItem.OrderStatus.Ordered
+                Status = OrderStatus.Ordered
             };
 
             orderDao.AddOrderItem(item);

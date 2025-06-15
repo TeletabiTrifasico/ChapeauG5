@@ -108,8 +108,8 @@ namespace ChapeauDAL
                     Quantity = (int)dr["quantity"],
                     Comment = dr["comment"] != DBNull.Value ? (string)dr["comment"] : string.Empty,
                     CreatedAt = (DateTime)dr["created_at"],
-                    Status = Enum.TryParse<OrderItem.OrderStatus>(dr["status"].ToString(), true, out OrderItem.OrderStatus status)
-                            ? status : OrderItem.OrderStatus.Ordered
+                    Status = Enum.TryParse<OrderStatus>(dr["status"].ToString(), true, out OrderStatus status)
+                            ? status : OrderStatus.Ordered
                 };
 
                 items.Add(item);

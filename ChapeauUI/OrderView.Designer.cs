@@ -276,7 +276,7 @@ namespace ChapeauG5
                 bool allServed = true;
                 foreach (OrderItem item in orderItems)
                 {
-                    if (item.Status != OrderItem.OrderStatus.Served)
+                    if (item.Status != OrderStatus.Served)
                     {
                         allServed = false;
                         break;

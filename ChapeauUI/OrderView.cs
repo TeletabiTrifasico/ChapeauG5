@@ -121,7 +121,7 @@ namespace ChapeauG5
                 Quantity = quantity,
                 Comment = comment,
                 CreatedAt = DateTime.Now,
-                Status = OrderItem.OrderStatus.Ordered
+                Status = OrderStatus.Ordered
             };
             
             // Add to our local list
