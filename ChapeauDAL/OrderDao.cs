@@ -224,6 +224,27 @@ namespace ChapeauDAL
             return result;
         }
 
+        public bool HasActiveOrder(int tableId)
+        {
+            string query = @"
+                SELECT COUNT(*) 
+                FROM [Order] 
+                WHERE table_id = @TableId AND is_done = 0";
+            SqlParameter[] parameters = {
+            new SqlParameter("@TableId", tableId)
+            };
+
+            object result = ExecuteScalar(query, parameters); // ExecuteScalar: tek de?er döndürür (count)
+            int count = Convert.ToInt32(result);
+
+            return count > 0;
+        }
+
+        private object ExecuteScalar(string query, SqlParameter[] parameters)
+        {
+            throw new NotImplementedException();
+        }
+
 
 
     }

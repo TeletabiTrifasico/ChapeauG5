@@ -399,7 +399,7 @@ namespace ChapeauG5
                         "Are you sure you want to close this order view? All unsaved changes will be lost.",
                         "Confirm Close",
                         MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
+                        MessageBoxIcon.Question) ;
                         
                     if (result == DialogResult.No)
                     {

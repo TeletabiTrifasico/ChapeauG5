@@ -8,7 +8,8 @@ namespace ChapeauService
     public class TableService
     {
         private TableDao tableDao;
-        
+        private OrderDao orderDao = new OrderDao();
+
         public TableService()
         {
             tableDao = new TableDao();
@@ -29,6 +30,11 @@ namespace ChapeauService
             // Get all tables and find the one with matching ID
             List<Table> tables = tableDao.GetAllTables();
             return tables.FirstOrDefault(t => t.TableId == tableId);
+        }
+
+        public bool CanFreeTable(int tableId)
+        {
+            return !orderDao.HasActiveOrder(tableId);
         }
     }
 }
