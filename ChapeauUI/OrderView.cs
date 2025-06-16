@@ -163,24 +163,18 @@ namespace ChapeauG5
                 {
                     // Create a safer way to access these properties
                     string itemName = GetItemName(item);
-                    decimal itemPrice = GetItemPrice(item);
+                    string quantity = item.Quantity.ToString();
                     string status = GetItemStatus(item);
-                    string comment = item.Comment ?? string.Empty;
-                    
+                    //string comment = item.Comment ?? string.Empty;
+
                     ListViewItem lvi = new ListViewItem(itemName);
-                    lvi.SubItems.Add(item.Quantity.ToString());
-                    lvi.SubItems.Add($"€{itemPrice:0.00}");
-                    
-                    decimal subtotal = item.Quantity * itemPrice;
-                    lvi.SubItems.Add($"€{subtotal:0.00}");
-                    
+                    lvi.SubItems.Add(quantity);
                     lvi.SubItems.Add(status);
-                    lvi.SubItems.Add(comment);
+                    //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
+
                     lvi.Tag = item;
-                    
                     lvOrderItems.Items.Add(lvi);
-                    
-                    orderTotal += subtotal;
+
                 }
                 
                 // Update the order total
