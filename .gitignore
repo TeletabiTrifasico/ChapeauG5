@@ -30,6 +30,13 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Configuration files with sensitive data
+App.config
+Web.config
+*.config.user
+appsettings.json
+appsettings.*.json
+
 # ReSharper
 _ReSharper*/
 *.[Rr]e[Ss]harper
