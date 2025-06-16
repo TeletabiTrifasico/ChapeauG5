@@ -168,6 +168,15 @@ namespace ChapeauG5
             this.btnCancel.BackColor = Color.LightGray;
             this.btnCancel.Click += new EventHandler(this.btnCancel_Click);
             
+            // Mark as Served Button
+            this.btnMarkServed = new Button();
+            this.btnMarkServed.Location = new Point(320, 550);
+            this.btnMarkServed.Size = new Size(120, 40);
+            this.btnMarkServed.Text = "Mark as Served";
+            this.btnMarkServed.BackColor = Color.LightCyan;
+            this.btnMarkServed.Click += new EventHandler(this.btnMarkServed_Click);
+            this.btnMarkServed.Enabled = false;
+            
             this.Controls.Add(this.lblTable);
             this.Controls.Add(this.lblCategory);
             this.Controls.Add(this.cmbCategory);
@@ -184,6 +193,7 @@ namespace ChapeauG5
             this.Controls.Add(this.btnSaveOrder);
             this.Controls.Add(this.btnPayment);
             this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.btnMarkServed);
             
             this.Load += new EventHandler(this.OrderView_Load);
             this.FormClosing += new FormClosingEventHandler(this.OrderView_FormClosing);
@@ -234,6 +244,24 @@ namespace ChapeauG5
         {
             try
             {
+                // Check if all items have been served
+                bool allServed = true;
+                foreach (OrderItem item in orderItems)
+                {
+                    if (item.Status != OrderItem.OrderStatus.Served)
+                    {
+                        allServed = false;
+                        break;
+                    }
+                }
+                
+                if (!allServed)
+                {
+                    MessageBox.Show("All order items must be served before proceeding to payment.", 
+                        "Items Not Served", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
                 // First check if there's a saved order
                 if (!currentOrderId.HasValue || !isExistingOrder)
                 {
@@ -272,41 +300,6 @@ namespace ChapeauG5
                     return;
                 }
                 
-                // Ensure all items are marked as served
-                bool allServed = true;
-                foreach (OrderItem item in orderItems)
-                {
-                    if (item.Status != OrderItem.OrderStatus.Served)
-                    {
-                        allServed = false;
-                        break;
-                    }
-                }
-                
-                if (!allServed)
-                {
-                    DialogResult result = MessageBox.Show(
-                        "Not all items are marked as served. Mark all as served and continue to payment?",
-                        "Items Not Served",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                        
-                    if (result == DialogResult.Yes)
-                    {
-                        // Mark all items as served
-                        orderService.MarkAllItemsAsServed(currentOrderId.Value);
-                        
-                        // Refresh order items
-                        orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
-                        RefreshOrderItemsView();
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                
-                // Open the payment form
                 PaymentForm paymentForm = new PaymentForm(currentOrderId.Value, loggedInEmployee);
                 
                 // Show the payment form as a dialog
@@ -346,5 +339,6 @@ namespace ChapeauG5
         private Button btnSaveOrder;
         private Button btnPayment;
         private Button btnCancel;
+        private Button btnMarkServed;
     }
 }

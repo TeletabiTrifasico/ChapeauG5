@@ -69,12 +69,41 @@ namespace ChapeauDAL
             return ReadOrder(dataTable.Rows[0]);
         }
 
+        public Order GetOrderWithItemsById(int orderId)
+        {
+            string query = @"
+                SELECT o.*, t.table_number
+                FROM [Order] o
+                JOIN [Table] t ON o.table_id = t.table_id
+                WHERE o.order_id = @OrderId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderId", orderId)
+            };
+            DataTable dataTable = ExecuteSelectQuery(query, parameters);
+            if (dataTable == null || dataTable.Rows.Count == 0)
+                return null;
+                
+            Order order = ReadOrder(dataTable.Rows[0]);
+            if (order.TableId != null)
+            {
+                order.TableId.TableNumber = (int)dataTable.Rows[0]["table_number"];
+            }
+            order.OrderItems = GetOrderItemsByOrderId(orderId);
+            return order;
+        }
+
         public List<OrderItem> GetOrderItemsByOrderId(int orderId)
         {
             string query = @"
-                SELECT oi.*, mi.name, mi.price, mi.description, mi.stock, mi.vat_percentage, mi.is_active
+                SELECT oi.*, mi.*, m.menu_card, m.category_id, m.name as category_name,
+                       CASE WHEN d.drink_item_id IS NOT NULL THEN 1 ELSE 0 END as is_drink,
+                       d.is_alcoholic
                 FROM Order_Item oi
                 JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
+                JOIN Menu m ON mi.category_id = m.category_id
+                LEFT JOIN Drink_Item d ON mi.menu_item_id = d.menu_item_id
                 WHERE oi.order_id = @OrderId
                 ORDER BY oi.created_at";
 
@@ -93,23 +122,30 @@ namespace ChapeauDAL
                 {
                     MenuItemId = (int)dr["menu_item_id"],
                     Name = (string)dr["name"],
-                    Price = (decimal)dr["price"],
                     Description = dr["description"] != DBNull.Value ? (string)dr["description"] : string.Empty,
+                    Price = (decimal)dr["price"],
                     Stock = (int)dr["stock"],
+                    CategoryId = new Menu 
+                    { 
+                        CategoryId = (int)dr["category_id"],
+                        CategoryName = (string)dr["category_name"],
+                        MenuCard = ParseMenuCard((string)dr["menu_card"])
+                    },
                     VatPercentage = (int)dr["vat_percentage"],
-                    IsActive = (bool)dr["is_active"]
+                    IsActive = (bool)dr["is_active"],
+                    CourseType = dr["course_type"] != DBNull.Value ? ParseCourseType((string)dr["course_type"]) : CourseType.Main,
+                    IsAlcoholic = (bool)(dr["is_drink"] != DBNull.Value && (int)dr["is_drink"] == 1 ? dr["is_alcoholic"] : false)
                 };
 
                 OrderItem item = new OrderItem
                 {
                     OrderItemId = (int)dr["order_item_id"],
                     OrderId = new Order { OrderId = (int)dr["order_id"] },
-                    MenuItemId = menuItem, // Use the fully populated MenuItem
+                    MenuItemId = menuItem,
                     Quantity = (int)dr["quantity"],
                     Comment = dr["comment"] != DBNull.Value ? (string)dr["comment"] : string.Empty,
                     CreatedAt = (DateTime)dr["created_at"],
-                    Status = Enum.TryParse<OrderItem.OrderStatus>(dr["status"].ToString(), true, out OrderItem.OrderStatus status)
-                            ? status : OrderItem.OrderStatus.Ordered
+                    Status = ParseOrderStatus((string)dr["status"])
                 };
 
                 items.Add(item);
@@ -193,19 +229,19 @@ namespace ChapeauDAL
         public List<TableOrderStatus> GetTableOrderStatuses()
         {
             string query = @"
-        SELECT 
-            t.table_id, 
-            t.table_number,
-            CASE WHEN o.order_id IS NOT NULL THEN 1 ELSE 0 END AS has_running_order,
-            MAX(CASE WHEN m.menu_card IN ('Lunch', 'Dinner') THEN oi.status END) AS food_status,
-            MAX(CASE WHEN m.menu_card = 'Drinks' THEN oi.status END) AS drink_status
-        FROM [Table] t
-        LEFT JOIN [Order] o ON t.table_id = o.table_id AND o.is_done = 0
-        LEFT JOIN Order_Item oi ON o.order_id = oi.order_id
-        LEFT JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
-        LEFT JOIN Menu m ON mi.category_id = m.category_id
-        GROUP BY t.table_id, t.table_number, o.order_id
-        ORDER BY t.table_number";
+            SELECT 
+                t.table_id, 
+                t.table_number,
+                CASE WHEN o.order_id IS NOT NULL THEN 1 ELSE 0 END AS has_running_order,
+                MAX(CASE WHEN m.menu_card IN ('Lunch', 'Dinner') THEN oi.status END) AS food_status,
+                MAX(CASE WHEN m.menu_card = 'Drinks' THEN oi.status END) AS drink_status
+            FROM [Table] t
+            LEFT JOIN [Order] o ON t.table_id = o.table_id AND o.is_done = 0
+            LEFT JOIN Order_Item oi ON o.order_id = oi.order_id
+            LEFT JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
+            LEFT JOIN Menu m ON mi.category_id = m.category_id
+            GROUP BY t.table_id, t.table_number, o.order_id
+            ORDER BY t.table_number";
 
             DataTable dt = ExecuteSelectQuery(query, null);
 
@@ -234,7 +270,7 @@ namespace ChapeauDAL
             new SqlParameter("@TableId", tableId)
             };
 
-            object result = ExecuteScalar(query, parameters); // ExecuteScalar: tek de?er döndürür (count)
+            object result = ExecuteScalar(query, parameters);
             int count = Convert.ToInt32(result);
 
             return count > 0;
@@ -242,10 +278,90 @@ namespace ChapeauDAL
 
         private object ExecuteScalar(string query, SqlParameter[] parameters)
         {
-            throw new NotImplementedException();
+            SqlConnection connection = new SqlConnection(connectionString);
+            SqlCommand command = new SqlCommand(query, connection);
+
+            if (parameters != null)
+            {
+                command.Parameters.AddRange(parameters);
+            }
+
+            try
+            {
+                connection.Open();
+                object result = command.ExecuteScalar();
+                return result;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                connection.Close();
+            }
         }
 
+        public void MarkOrderAsDone(int orderId)
+        {
+            string query = "UPDATE [Order] SET is_done = 1 WHERE order_id = @OrderId";
+            
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderId", orderId)
+            };
+            
+            ExecuteEditQuery(query, parameters);
+        }
 
+        // Add this new method to update a specific order item's status
+        public void MarkOrderItemAsServed(int orderItemId)
+        {
+            string query = @"
+                UPDATE Order_Item 
+                SET status = 'Served' 
+                WHERE order_item_id = @OrderItemId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId)
+            };
+
+            ExecuteEditQuery(query, parameters);
+        }
+
+        private CourseType ParseCourseType(string courseType)
+        {
+            if (string.IsNullOrEmpty(courseType) || 
+                !Enum.TryParse<CourseType>(courseType, true, out CourseType result))
+            {
+                return CourseType.Main;
+            }
+            
+            return result;
+        }
+
+        private OrderItem.OrderStatus ParseOrderStatus(string status)
+        {
+            if (string.IsNullOrEmpty(status) || 
+                !Enum.TryParse<OrderItem.OrderStatus>(status, true, out OrderItem.OrderStatus result))
+            {
+                return OrderItem.OrderStatus.Ordered;
+            }
+            
+            return result;
+        }
+
+        private MenuCard ParseMenuCard(string menuCard)
+        {
+            if (string.IsNullOrEmpty(menuCard) || 
+                !Enum.TryParse<MenuCard>(menuCard, true, out MenuCard result))
+            {
+                return MenuCard.Food;
+            }
+            
+            return result;
+        }
 
     }
 }

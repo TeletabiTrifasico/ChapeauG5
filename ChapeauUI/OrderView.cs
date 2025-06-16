@@ -55,6 +55,9 @@ namespace ChapeauG5
                 tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
             }
             // Don't create a new order yet - wait for confirmation
+            
+            // Initially disable the payment button until all items are served
+            UpdatePaymentButtonState();
         }
         
         private void LoadMenuCategories()
@@ -192,6 +195,12 @@ namespace ChapeauG5
                 MessageBox.Show($"Error refreshing order items: {ex.Message}", 
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            
+            // Enable/disable Mark as Served button if we have items
+            btnMarkServed.Enabled = orderItems.Count > 0 && isExistingOrder;
+            
+            // Update payment button state
+            UpdatePaymentButtonState();
         }
         
         // Add this method to save the entire order at once
@@ -353,15 +362,29 @@ namespace ChapeauG5
                 
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
+                    int newQuantity = (int)nudEditQuantity.Value;
+                    string newComment = txtEditComment.Text;
+                    
                     // Update the selected item's properties
-                    selectedItem.Quantity = (int)nudEditQuantity.Value;
-                    selectedItem.Comment = txtEditComment.Text;
+                    selectedItem.Quantity = newQuantity;
+                    selectedItem.Comment = newComment;
                     
-                    // If it's an existing order with items already in the database,
-                    // we would need to update it in the database
-                    // For now, we'll just update our local list
+                    // If it's an existing order with items already in the database
+                    if (isExistingOrder && selectedItem.OrderItemId != 0)
+                    {
+                        try
+                        {
+                            orderService.UpdateOrderItem(selectedItem.OrderItemId, newQuantity, newComment);
+                            MessageBox.Show("Order item updated successfully.", 
+                                "Item Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error updating order item: {ex.Message}", 
+                                "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
                     
-                    // Refresh the display
                     RefreshOrderItemsView();
                 }
             }
@@ -415,6 +438,88 @@ namespace ChapeauG5
             
             // Close the form
             this.Close();
+        }
+
+        // Add this new method for the button click event
+
+        private void btnMarkServed_Click(object sender, EventArgs e)
+        {
+            if (lvOrderItems.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select an item to mark as served.", 
+                    "No Item Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            OrderItem selectedItem = (OrderItem)lvOrderItems.SelectedItems[0].Tag;
+            
+            // Check if the item is already served
+            if (selectedItem.Status == OrderItem.OrderStatus.Served)
+            {
+                MessageBox.Show("This item has already been served.", 
+                    "Already Served", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            
+            // Check if it's an existing order with items already in the database
+            if (!isExistingOrder || selectedItem.OrderItemId == 0)
+            {
+                MessageBox.Show("You need to save the order before marking items as served.", 
+                    "Save Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            try
+            {
+                // Update the item status in the database
+                orderService.MarkOrderItemAsServed(selectedItem.OrderItemId);
+                
+                // Update the local item status
+                selectedItem.Status = OrderItem.OrderStatus.Served;
+                
+                // Refresh the display
+                RefreshOrderItemsView();
+                
+                // Update Payment button state
+                UpdatePaymentButtonState();
+                
+                MessageBox.Show("Item marked as served.", "Status Updated", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating item status: {ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Add this method to check if all items are served and update the Payment button state
+        private void UpdatePaymentButtonState()
+        {
+            bool allServed = true;
+            
+            foreach (OrderItem item in orderItems)
+            {
+                if (item.Status != OrderItem.OrderStatus.Served)
+                {
+                    allServed = false;
+                    break;
+                }
+            }
+            
+            btnPayment.Enabled = allServed && orderItems.Count > 0;
+            
+            // Set tooltip or label to indicate why payment might be disabled
+            if (!allServed && orderItems.Count > 0)
+            {
+                btnPayment.Text = "Serve items first";
+                btnPayment.BackColor = Color.Gray;
+            }
+            else if (orderItems.Count > 0)
+            {
+                btnPayment.Text = "Payment";
+                btnPayment.BackColor = Color.LightBlue;
+            }
         }
     }
 }
