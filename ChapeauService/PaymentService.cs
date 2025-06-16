@@ -88,7 +88,8 @@ namespace ChapeauService
 
         // Process payment for an invoice
         public int ProcessPayment(int invoiceId, PaymentMethod paymentMethod, 
-                                decimal amount, string feedback, FeedbackType feedbackType)
+                                decimal amount, string feedback, FeedbackType feedbackType,
+                                bool markOrderAsDone = true)
         {
             // Get the full invoice object from the database instead of creating a new one
             Invoice invoice = invoiceDao.GetInvoiceById(invoiceId);
@@ -106,7 +107,7 @@ namespace ChapeauService
             int paymentId = paymentDao.CreatePayment(payment);
             
             // Mark the order as done
-            if (invoice != null)
+            if (markOrderAsDone && invoice != null)
             {
                 orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
             }
