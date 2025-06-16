@@ -35,36 +35,19 @@ namespace ChapeauDAL
         {
             try
             {
-                // Get the current status first for debugging
-                string currentStatus = GetCurrentTableStatus(tableId);
-                
-                // Get an existing table with a status that works
-                string query = "SELECT TOP 1 status FROM [Table] WHERE table_id <> @TableId";
-                DataTable dt = ExecuteSelectQuery(query, new SqlParameter[] { new SqlParameter("@TableId", tableId) });
-                
-                string validStatus = "Available"; // Default fallback
-                
-                if (dt.Rows.Count > 0)
-                {
-                    // Use a status value that exists in the database
-                    validStatus = dt.Rows[0]["status"].ToString();
-                }
-                
-                // Determine which valid status to use
+                // Convert enum to the exact string value your database expects
                 string newStatus;
                 switch (status)
                 {
-                    case TableStatus.Available:
-                        newStatus = "Available"; // Exact match 
+                    case TableStatus.Free:
+                        // Change this to match what your database expects
+                        newStatus = "Free"; // Try "Free" instead of "Available"
                         break;
                     case TableStatus.Occupied:
-                        newStatus = "Occupied"; // Exact match 
-                        break;
-                    case TableStatus.Reserved:
-                        newStatus = "Reserved"; // Exact match 
+                        newStatus = "Occupied"; 
                         break;
                     default:
-                        newStatus = validStatus; // Fallback to a known value
+                        newStatus = "Free"; // Default to Free
                         break;
                 }
                 
@@ -78,12 +61,9 @@ namespace ChapeauDAL
                 };
                 
                 ExecuteEditQuery(updateQuery, parameters);
-                
-                Console.WriteLine($"Successfully updated table {tableId} from '{currentStatus}' to '{newStatus}'");
             }
             catch (Exception ex)
             {
-                //detailed information to the exception
                 throw new Exception($"Error updating table {tableId} status: {ex.Message} - Check constraint violation.", ex);
             }
         }
@@ -110,7 +90,7 @@ namespace ChapeauDAL
             if (Enum.TryParse<TableStatus>(status, true, out TableStatus result))
                 return result;
             
-            return TableStatus.Available; // Default
+            return TableStatus.Free; // Default
         }
     }
 }

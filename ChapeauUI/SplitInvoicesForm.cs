@@ -234,7 +234,7 @@ namespace ChapeauG5
                         TipAmount = tipAmount,
                         FinalAmount = totalAmount + tipAmount,
                         Feedback = $"Split payment {invoiceIndex + 1} of {splitInvoices.Count}",
-                        EmployeeId = loggedInEmployee.EmployeeId
+                        EmployeeId = loggedInEmployee
                     };
                     
                     // Process payment
@@ -273,36 +273,6 @@ namespace ChapeauG5
                         "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-        }
-    }
-    
-    public partial class SplitInvoicesForm
-    {
-        private TabControl tabSplitInvoices;
-        private Button btnClose;
-        
-        private void InitializeComponent()
-        {
-            this.Text = "Split Bills";
-            this.Size = new Size(580, 450);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.MaximizeBox = false;
-            
-            this.tabSplitInvoices = new TabControl();
-            this.tabSplitInvoices.Location = new Point(10, 10);
-            this.tabSplitInvoices.Size = new Size(550, 380);
-            
-            this.btnClose = new Button();
-            this.btnClose.Text = "Close";
-            this.btnClose.DialogResult = DialogResult.Cancel;
-            this.btnClose.Location = new Point(460, 395);
-            this.btnClose.Size = new Size(100, 30);
-            
-            this.Controls.Add(this.tabSplitInvoices);
-            this.Controls.Add(this.btnClose);
-            
-            this.Load += new EventHandler(this.SplitInvoicesForm_Load);
         }
     }
 }

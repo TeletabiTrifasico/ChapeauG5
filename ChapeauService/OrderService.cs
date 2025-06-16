@@ -19,8 +19,17 @@ namespace ChapeauService
             // Create a new order
             Order order = new Order
             {
-                TableId = tableId,
-                EmployeeId = employeeId,
+                // Create Table object with the ID
+                TableId = new Table { TableId = tableId },
+                // Create Employee object with the ID and required fields
+                EmployeeId = new Employee { 
+                    EmployeeId = employeeId,
+                    Username = string.Empty,  // Required field
+                    PasswordHash = string.Empty,  // Required field
+                    FirstName = string.Empty,  // Required field
+                    LastName = string.Empty,  // Required field
+                    Email = string.Empty  // Required field
+                },
                 CreatedAt = DateTime.Now,
                 IsDone = false
             };
@@ -32,12 +41,15 @@ namespace ChapeauService
         {
             OrderItem item = new OrderItem
             {
-                OrderId = orderId,
-                MenuItemId = menuItemId,
+                // Create Order object with the ID
+                OrderId = new Order { OrderId = orderId },
+                // Create MenuItem object with the ID
+                MenuItemId = new MenuItem { MenuItemId = menuItemId },
                 Quantity = quantity,
                 Comment = comment,
                 CreatedAt = DateTime.Now,
-                Status = "Ordered"
+                // Use the enum value instead of string
+                Status = OrderItem.OrderStatus.Ordered
             };
 
             orderDao.AddOrderItem(item);
@@ -57,5 +69,21 @@ namespace ChapeauService
         {
             orderDao.MarkAllItemsAsServed(orderId);
         }
+
+        public void UpdateOrderItem(int orderItemId, int quantity, string comment)
+        {
+            orderDao.UpdateOrderItem(orderItemId, quantity, comment);
+        }
+
+        public void DeleteOrderItem(int orderItemId)
+        {
+            orderDao.DeleteOrderItem(orderItemId);
+        }
+
+        public List<TableOrderStatus> GetTableOrderStatuses()
+        {
+            return orderDao.GetTableOrderStatuses();
+        }
+
     }
 }

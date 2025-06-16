@@ -4,9 +4,8 @@ namespace ChapeauModel
 {
     public enum TableStatus
     {
-        Available,
+        Free,     
         Occupied,
-        Reserved
     }
     
     public class Table
@@ -16,6 +15,6 @@ namespace ChapeauModel
         public int Capacity { get; set; }
         public TableStatus Status { get; set; }
         
-        public bool IsAvailable => Status == TableStatus.Available;
+        public bool IsAvailable => Status == TableStatus.Free;
     }
 }
