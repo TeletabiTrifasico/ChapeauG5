@@ -18,33 +18,44 @@ namespace ChapeauDAL
                 tipAmount = payment.InvoiceId.TotalTipAmount;
             }
             
-            // Determine which VAT rate was predominant
-            string vatPercentageValue = "low";
+            // Get the total VAT amount
+            decimal totalVatAmount = 0;
             if (payment.InvoiceId != null)
             {
-                if (payment.InvoiceId.HighVatAmount > payment.InvoiceId.LowVatAmount){vatPercentageValue = "high";}
-                else{vatPercentageValue = "low";}
+                totalVatAmount = payment.InvoiceId.TotalVat;
             }
             
             // Map the enum to the exact string values expected by the database
             string paymentMethodString = MapPaymentMethodToDbValue(payment.PaymentMethod);
             
+            // Get the EXCLUSIVE price (total before VAT and tip)
+            decimal totalExclusivePrice = 0;
+            if (payment.InvoiceId != null)
+            {
+                // Calculate total amount excluding VAT based on the total amount and VAT amount
+                totalExclusivePrice = payment.InvoiceId.TotalAmount - totalVatAmount;
+                
+                Console.WriteLine($"DEBUG - Total Amount: {payment.InvoiceId.TotalAmount}");
+                Console.WriteLine($"DEBUG - Total VAT: {totalVatAmount}");
+                Console.WriteLine($"DEBUG - Calculated Ex VAT: {totalExclusivePrice}");
+            }
+            
             string query = @"
                 INSERT INTO Payments 
-                (invoice_id, payment_method, total_price, feedback, final_amount, tip_amount, vat_percentage) 
+                (invoice_id, payment_method, total_price, feedback, final_amount, tip_amount, vat_amount) 
                 VALUES 
-                (@InvoiceId, @PaymentMethod, @Amount, @Feedback, @FinalAmount, @TipAmount, @VatPercentage);
+                (@InvoiceId, @PaymentMethod, @TotalPrice, @Feedback, @FinalAmount, @TipAmount, @VatAmount);
                 SELECT SCOPE_IDENTITY();";
 
             SqlParameter[] parameters = new SqlParameter[]
             {
                 new SqlParameter("@InvoiceId", payment.InvoiceId.InvoiceId),
                 new SqlParameter("@PaymentMethod", paymentMethodString),
-                new SqlParameter("@Amount", payment.Amount),
+                new SqlParameter("@TotalPrice", totalExclusivePrice), // Price excluding VAT and tip
                 new SqlParameter("@Feedback", string.IsNullOrEmpty(payment.Feedback) ? (object)DBNull.Value : payment.Feedback),
-                new SqlParameter("@FinalAmount", payment.Amount),
+                new SqlParameter("@FinalAmount", payment.Amount), // Total final amount with tip
                 new SqlParameter("@TipAmount", tipAmount),
-                new SqlParameter("@VatPercentage", vatPercentageValue)
+                new SqlParameter("@VatAmount", totalVatAmount) // Store VAT amount
             };
 
             return ExecuteInsertQuery(query, parameters);

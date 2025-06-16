@@ -36,7 +36,7 @@ namespace ChapeauG5
             
             // Form settings
             this.Text = "Process Payment";
-            this.Size = new Size(800, 800);
+            this.Size = new Size(800, 840); // Increased height
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -171,49 +171,49 @@ namespace ChapeauG5
             totalsPanel.Controls.Add(lblFinalAmount);
             totalsPanel.Controls.Add(this.lblFinalAmountValue);
             
-            // Payment Method Section
+            // Payment Method Section 
             Label lblPaymentMethod = new Label();
-            lblPaymentMethod.Location = new Point(20, 530);
+            lblPaymentMethod.Location = new Point(20, 570);
             lblPaymentMethod.Size = new Size(150, 25);
             lblPaymentMethod.Text = "Payment Method:";
             lblPaymentMethod.TextAlign = ContentAlignment.MiddleLeft;
             lblPaymentMethod.Font = new Font("Segoe UI", 10);
             
             this.cmbPaymentMethod = new ComboBox();
-            this.cmbPaymentMethod.Location = new Point(170, 530);
+            this.cmbPaymentMethod.Location = new Point(170, 570);
             this.cmbPaymentMethod.Size = new Size(200, 25);
             this.cmbPaymentMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             
-            // Feedback Section
+            // Feedback Section (adjusted position)
             Label lblFeedbackType = new Label();
-            lblFeedbackType.Location = new Point(20, 570);
+            lblFeedbackType.Location = new Point(20, 610);
             lblFeedbackType.Size = new Size(150, 25);
             lblFeedbackType.Text = "Feedback Type:";
             lblFeedbackType.TextAlign = ContentAlignment.MiddleLeft;
             lblFeedbackType.Font = new Font("Segoe UI", 10);
             
             this.cmbFeedbackType = new ComboBox();
-            this.cmbFeedbackType.Location = new Point(170, 570);
+            this.cmbFeedbackType.Location = new Point(170, 610);
             this.cmbFeedbackType.Size = new Size(200, 25);
             this.cmbFeedbackType.DropDownStyle = ComboBoxStyle.DropDownList;
             this.cmbFeedbackType.SelectedIndexChanged += new EventHandler(this.cmbFeedbackType_SelectedIndexChanged);
             
             Label lblFeedback = new Label();
-            lblFeedback.Location = new Point(20, 610);
+            lblFeedback.Location = new Point(20, 650);
             lblFeedback.Size = new Size(150, 25);
             lblFeedback.Text = "Feedback:";
             lblFeedback.TextAlign = ContentAlignment.MiddleLeft;
             lblFeedback.Font = new Font("Segoe UI", 10);
             
             this.txtFeedback = new TextBox();
-            this.txtFeedback.Location = new Point(170, 610);
+            this.txtFeedback.Location = new Point(170, 650);
             this.txtFeedback.Size = new Size(610, 80);
             this.txtFeedback.Multiline = true;
             this.txtFeedback.Enabled = false;
             
             // Process Payment Button
             this.btnProcessPayment = new Button();
-            this.btnProcessPayment.Location = new Point(450, 700);
+            this.btnProcessPayment.Location = new Point(450, 740);
             this.btnProcessPayment.Size = new Size(160, 50);
             this.btnProcessPayment.Text = "Process Payment";
             this.btnProcessPayment.BackColor = Color.LightGreen;
@@ -222,12 +222,60 @@ namespace ChapeauG5
             
             // Cancel Button
             this.btnCancel = new Button();
-            this.btnCancel.Location = new Point(620, 700);
+            this.btnCancel.Location = new Point(620, 740);
             this.btnCancel.Size = new Size(160, 50);
             this.btnCancel.Text = "Cancel";
             this.btnCancel.BackColor = Color.LightCoral;
             this.btnCancel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             this.btnCancel.Click += new EventHandler(this.btnCancel_Click);
+            
+            // Add Split Bill controls with adjusted positions
+            Label lblSplitBill = new Label();
+            lblSplitBill.Location = new Point(20, 530);
+            lblSplitBill.Size = new Size(150, 25);
+            lblSplitBill.Text = "Split Bill:";
+            lblSplitBill.TextAlign = ContentAlignment.MiddleLeft;
+            lblSplitBill.Font = new Font("Segoe UI", 10);
+            
+            this.chkSplitBill = new CheckBox();
+            this.chkSplitBill.Location = new Point(170, 530);
+            this.chkSplitBill.Size = new Size(80, 25);
+            this.chkSplitBill.Text = "Split";
+            this.chkSplitBill.CheckedChanged += new EventHandler(this.chkSplitBill_CheckedChanged);
+            
+            // Number of splits label
+            this.lblNumberOfSplits = new Label();
+            this.lblNumberOfSplits.Location = new Point(250, 530);
+            this.lblNumberOfSplits.Size = new Size(80, 25);
+            this.lblNumberOfSplits.Text = "# of splits:";
+            this.lblNumberOfSplits.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblNumberOfSplits.Font = new Font("Segoe UI", 10);
+            this.lblNumberOfSplits.Visible = false;
+            
+            this.nudNumberOfSplits = new NumericUpDown();
+            this.nudNumberOfSplits.Location = new Point(330, 530);
+            this.nudNumberOfSplits.Size = new Size(60, 25);
+            this.nudNumberOfSplits.Minimum = 2;
+            this.nudNumberOfSplits.Maximum = 10;
+            this.nudNumberOfSplits.Value = 2;
+            this.nudNumberOfSplits.Visible = false;
+            this.nudNumberOfSplits.ValueChanged += new EventHandler(this.nudNumberOfSplits_ValueChanged);
+            
+            // Split amount label
+            this.lblSplitAmount = new Label();
+            this.lblSplitAmount.Location = new Point(400, 530);
+            this.lblSplitAmount.Size = new Size(350, 25);
+            this.lblSplitAmount.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblSplitAmount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            this.lblSplitAmount.Text = "Each person pays: €0.00";
+            this.lblSplitAmount.Visible = false;
+            
+            // Add new controls to the form
+            this.Controls.Add(lblSplitBill);
+            this.Controls.Add(this.chkSplitBill);
+            this.Controls.Add(this.lblNumberOfSplits);
+            this.Controls.Add(this.nudNumberOfSplits);
+            this.Controls.Add(this.lblSplitAmount);
             
             // Add controls to form
             this.Controls.Add(this.lblHeader);
@@ -261,5 +309,9 @@ namespace ChapeauG5
         private TextBox txtFeedback;
         private Button btnProcessPayment;
         private Button btnCancel;
+        private CheckBox chkSplitBill;
+        private NumericUpDown nudNumberOfSplits;
+        private Label lblSplitAmount;
+        private Label lblNumberOfSplits;
     }
 }

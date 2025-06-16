@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ChapeauService;
 
 namespace ChapeauG5.ChapeauUI
 {
@@ -15,6 +16,7 @@ namespace ChapeauG5.ChapeauUI
     {
         private Employee loggedInEmployee;
         private Table currentTable;
+        private readonly OrderItemService orderItemService = new OrderItemService();
 
         public OccupiedTableManagement(Employee employee, Table table)
         {
@@ -29,6 +31,13 @@ namespace ChapeauG5.ChapeauUI
             }
 
             lbltabelNumber.Text = $"Table {currentTable.TableNumber}";
+
+            this.Load += OccupiedTableManagement_Load;
+        }
+
+        private void OccupiedTableManagement_Load(object sender, EventArgs e)
+        {
+            LoadReadyToBeServedItems();
         }
 
 
@@ -79,5 +88,49 @@ namespace ChapeauG5.ChapeauUI
             }
 
         }
+
+
+        private void setAsServedBtn_Click(object sender, EventArgs e)
+        {
+            if (lvReadyToBeServedItems.Items.Count == 0)
+            {
+                MessageBox.Show("There are no items ready to be served.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Make all ietms in the list served
+            foreach (ListViewItem lvi in lvReadyToBeServedItems.Items)
+            {
+                if (lvi.Tag is OrderItem item)
+                {
+                    orderItemService.UpdateOrderItemStatus(item.OrderItemId, OrderItem.OrderStatus.Served);
+                }
+            }
+
+            MessageBox.Show("All ready-to-be-served items have been marked as served.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Update the list
+            LoadReadyToBeServedItems();
+
+        }
+
+        private void LoadReadyToBeServedItems()
+        {
+            lvReadyToBeServedItems.Items.Clear();
+            var readyItems = orderItemService.GetReadyToBeServedItemsByTable(currentTable.TableId);
+
+            foreach (var item in readyItems)
+            {
+                var lvi = new ListViewItem(item.MenuItemId?.Name ?? "Unknown");
+                lvi.SubItems.Add(item.Quantity.ToString());
+                lvi.SubItems.Add(item.Status.ToString());
+                lvi.Tag = item;
+                lvReadyToBeServedItems.Items.Add(lvi);
+            }
+        }
+
     }
+
+
 }
+

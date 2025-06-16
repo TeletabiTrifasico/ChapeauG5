@@ -80,7 +80,7 @@ namespace ChapeauG5
 
             // --- Tables Panel ---
             this.tlpTables = new TableLayoutPanel();
-            this.tlpTables.Location = new Point(100, 150);
+            this.tlpTables.Location = new Point(80, 150);
             this.tlpTables.Size = new Size(1000, 600);
             this.tlpTables.Anchor = AnchorStyles.None;
             this.tlpTables.AutoSize = false;
@@ -88,10 +88,10 @@ namespace ChapeauG5
             this.tlpTables.RowCount = 2;
             this.tlpTables.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
 
-            //for (int i = 0; i < 5; i++)
-            //    this.tlpTables.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            //for (int i = 0; i < 2; i++)
-            //    this.tlpTables.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            for (int i = 0; i < 5; i++)
+                this.tlpTables.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+            for (int i = 0; i < 2; i++)
+                this.tlpTables.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
 
             this.tlpTables.Dock = DockStyle.None;
             this.tlpTables.Anchor = AnchorStyles.None;

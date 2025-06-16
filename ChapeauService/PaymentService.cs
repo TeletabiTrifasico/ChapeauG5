@@ -24,35 +24,43 @@ namespace ChapeauService
             return orderDao.GetOrderWithItemsById(orderId);
         }
 
-        // Calculate VAT amounts for an order
+        // Calculate VAT amounts for an order - corrected for prices that already include VAT
         public (decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) CalculateOrderTotals(List<OrderItem> orderItems)
         {
             decimal totalExVat = 0;
             decimal lowVatAmount = 0;  // 9% VAT
             decimal highVatAmount = 0; // 21% VAT
+            decimal totalWithVat = 0;
             
             foreach (OrderItem item in orderItems)
             {
+                // This is the total including VAT
                 decimal itemTotal = item.Quantity * item.MenuItemId.Price;
-                decimal itemVat;
+                totalWithVat += itemTotal;
                 
-                if (item.MenuItemId.IsAlcoholic)
+                // Use the VAT percentage
+                int vatPercentage = item.MenuItemId.VatPercentage;
+                
+                // Extract the VAT that's already included in the price
+                decimal itemVat;
+                if (vatPercentage == 21)
                 {
                     // High VAT rate (21%)
-                    itemVat = itemTotal * 0.21m;
+                    // VAT amount = Total - (Total / (1 + VAT rate))
+                    itemVat = itemTotal - (itemTotal / 1.21m);
                     highVatAmount += itemVat;
                 }
                 else
                 {
                     // Low VAT rate (9%)
-                    itemVat = itemTotal * 0.09m;
+                    itemVat = itemTotal - (itemTotal / 1.09m);
                     lowVatAmount += itemVat;
                 }
                 
-                totalExVat += itemTotal - itemVat;
+                // Calculate price excluding VAT (price without the VAT component)
+                decimal itemExVat = itemTotal - itemVat;
+                totalExVat += itemExVat;
             }
-            
-            decimal totalWithVat = totalExVat + lowVatAmount + highVatAmount;
             
             return (totalExVat, lowVatAmount, highVatAmount, totalWithVat);
         }
@@ -80,7 +88,8 @@ namespace ChapeauService
 
         // Process payment for an invoice
         public int ProcessPayment(int invoiceId, PaymentMethod paymentMethod, 
-                                decimal amount, string feedback, FeedbackType feedbackType)
+                                decimal amount, string feedback, FeedbackType feedbackType,
+                                bool markOrderAsDone = true)
         {
             // Get the full invoice object from the database instead of creating a new one
             Invoice invoice = invoiceDao.GetInvoiceById(invoiceId);
@@ -98,7 +107,7 @@ namespace ChapeauService
             int paymentId = paymentDao.CreatePayment(payment);
             
             // Mark the order as done
-            if (invoice != null)
+            if (markOrderAsDone && invoice != null)
             {
                 orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
             }

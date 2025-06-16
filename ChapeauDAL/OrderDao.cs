@@ -314,6 +314,22 @@ namespace ChapeauDAL
             ExecuteEditQuery(query, parameters);
         }
 
+        // Add this new method to update a specific order item's status
+        public void MarkOrderItemAsServed(int orderItemId)
+        {
+            string query = @"
+                UPDATE Order_Item 
+                SET status = 'Served' 
+                WHERE order_item_id = @OrderItemId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId)
+            };
+
+            ExecuteEditQuery(query, parameters);
+        }
+
         private CourseType ParseCourseType(string courseType)
         {
             if (string.IsNullOrEmpty(courseType) || 
