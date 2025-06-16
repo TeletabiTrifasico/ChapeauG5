@@ -359,15 +359,29 @@ namespace ChapeauG5
                 
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
+                    int newQuantity = (int)nudEditQuantity.Value;
+                    string newComment = txtEditComment.Text;
+                    
                     // Update the selected item's properties
-                    selectedItem.Quantity = (int)nudEditQuantity.Value;
-                    selectedItem.Comment = txtEditComment.Text;
+                    selectedItem.Quantity = newQuantity;
+                    selectedItem.Comment = newComment;
                     
-                    // If it's an existing order with items already in the database,
-                    // we would need to update it in the database
-                    // For now, we'll just update our local list
+                    // If it's an existing order with items already in the database
+                    if (isExistingOrder && selectedItem.OrderItemId != 0)
+                    {
+                        try
+                        {
+                            orderService.UpdateOrderItem(selectedItem.OrderItemId, newQuantity, newComment);
+                            MessageBox.Show("Order item updated successfully.", 
+                                "Item Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error updating order item: {ex.Message}", 
+                                "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
                     
-                    // Refresh the display
                     RefreshOrderItemsView();
                 }
             }

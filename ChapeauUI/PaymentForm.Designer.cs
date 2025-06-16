@@ -6,34 +6,15 @@ namespace ChapeauG5
 {
     partial class PaymentForm
     {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
         private System.ComponentModel.IContainer components = null;
-        
-        private ListView lvInvoiceItems;
-        private Label lblOrderInfo;
-        private Label lblSubtotalLabel;
-        private Label lblSubtotal;
-        private Label lblVatAmountLabel;
-        private Label lblVatAmount;
-        private Label lblTotalLabel;
-        private Label lblTotal;
-        private Panel pnlExistingPayments;
-        private Label lblExistingPayments;
-        private ListView lvExistingPayments;
-        private Label lblTotalPaid;
-        private Label lblRemaining;
-        private Panel pnlPayment;
-        private GroupBox grpPaymentMethod;
-        private ComboBox cmbPaymentMethod;
-        private Label lblTipAmount;
-        private TextBox txtTipAmount;
-        private Button btnSplitBill;
-        private Button btnProcessPayment;
-        private GroupBox grpFeedback;
-        private RadioButton rdoComment;
-        private RadioButton rdoComplaint;
-        private RadioButton rdoCommendation;
-        private TextBox txtFeedback;
-        
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -42,204 +23,243 @@ namespace ChapeauG5
             }
             base.Dispose(disposing);
         }
-        
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.Text = "Payment";
-            this.Size = new System.Drawing.Size(800, 700);
+            
+            // Form settings
+            this.Text = "Process Payment";
+            this.Size = new Size(800, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
             
-            // Invoice items list view
-            this.lvInvoiceItems = new ListView();
-            this.lvInvoiceItems.Location = new Point(20, 60);
-            this.lvInvoiceItems.Size = new Size(550, 200);
-            this.lvInvoiceItems.View = View.Details;
-            this.lvInvoiceItems.FullRowSelect = true;
-            this.lvInvoiceItems.GridLines = true;
-            this.lvInvoiceItems.Columns.Add("Item", 250);
-            this.lvInvoiceItems.Columns.Add("Qty", 50);
-            this.lvInvoiceItems.Columns.Add("Price", 80);
-            this.lvInvoiceItems.Columns.Add("Subtotal", 100);
-            this.lvInvoiceItems.Columns.Add("VAT", 70);
+            // Header Label
+            this.lblHeader = new Label();
+            this.lblHeader.Location = new Point(20, 20);
+            this.lblHeader.Size = new Size(760, 30);
+            this.lblHeader.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            this.lblHeader.TextAlign = ContentAlignment.MiddleCenter;
+            this.lblHeader.Text = "Payment for Table X";
             
-            // Order info label
-            this.lblOrderInfo = new Label();
-            this.lblOrderInfo.Location = new Point(20, 20);
-            this.lblOrderInfo.Size = new Size(550, 30);
-            this.lblOrderInfo.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            this.lblOrderInfo.Text = "Order Invoice";
+            // Order Items ListView
+            this.lvOrderItems = new ListView();
+            this.lvOrderItems.Location = new Point(20, 60);
+            this.lvOrderItems.Size = new Size(760, 300);
+            this.lvOrderItems.View = View.Details;
+            this.lvOrderItems.FullRowSelect = true;
+            this.lvOrderItems.Columns.Add("Item", 250);
+            this.lvOrderItems.Columns.Add("Qty", 50);
+            this.lvOrderItems.Columns.Add("Price", 80);
+            this.lvOrderItems.Columns.Add("VAT", 60);
+            this.lvOrderItems.Columns.Add("Subtotal", 100);
             
-            // Invoice summary labels
-            this.lblSubtotalLabel = new Label();
-            this.lblSubtotalLabel.Location = new Point(430, 270);
-            this.lblSubtotalLabel.Size = new Size(70, 20);
-            this.lblSubtotalLabel.Text = "Subtotal:";
-            this.lblSubtotalLabel.TextAlign = ContentAlignment.MiddleRight;
+            // Totals Panel
+            Panel totalsPanel = new Panel();
+            totalsPanel.Location = new Point(20, 370);
+            totalsPanel.Size = new Size(760, 150);
+            totalsPanel.BorderStyle = BorderStyle.FixedSingle;
             
-            this.lblSubtotal = new Label();
-            this.lblSubtotal.Location = new Point(500, 270);
-            this.lblSubtotal.Size = new Size(70, 20);
-            this.lblSubtotal.TextAlign = ContentAlignment.MiddleRight;
+            // Subtotal (ex. VAT)
+            Label lblSubtotal = new Label();
+            lblSubtotal.Location = new Point(10, 10);
+            lblSubtotal.Size = new Size(200, 25);
+            lblSubtotal.Text = "Subtotal (ex. VAT):";
+            lblSubtotal.TextAlign = ContentAlignment.MiddleLeft;
+            lblSubtotal.Font = new Font("Segoe UI", 10);
             
-            this.lblVatAmountLabel = new Label();
-            this.lblVatAmountLabel.Location = new Point(430, 295);
-            this.lblVatAmountLabel.Size = new Size(70, 20);
-            this.lblVatAmountLabel.Text = "VAT:";
-            this.lblVatAmountLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblSubtotalValue = new Label();
+            this.lblSubtotalValue.Location = new Point(220, 10);
+            this.lblSubtotalValue.Size = new Size(100, 25);
+            this.lblSubtotalValue.TextAlign = ContentAlignment.MiddleRight;
+            this.lblSubtotalValue.Font = new Font("Segoe UI", 10);
+            this.lblSubtotalValue.Text = "€0.00";
             
-            this.lblVatAmount = new Label();
-            this.lblVatAmount.Location = new Point(500, 295);
-            this.lblVatAmount.Size = new Size(70, 20);
-            this.lblVatAmount.TextAlign = ContentAlignment.MiddleRight;
+            // Low VAT Amount (9%)
+            Label lblLowVat = new Label();
+            lblLowVat.Location = new Point(10, 40);
+            lblLowVat.Size = new Size(200, 25);
+            lblLowVat.Text = "Low VAT Amount (9%):";
+            lblLowVat.TextAlign = ContentAlignment.MiddleLeft;
+            lblLowVat.Font = new Font("Segoe UI", 10);
             
-            this.lblTotalLabel = new Label();
-            this.lblTotalLabel.Location = new Point(430, 325);
-            this.lblTotalLabel.Size = new Size(70, 20);
-            this.lblTotalLabel.Text = "Total:";
-            this.lblTotalLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.lblTotalLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblLowVatValue = new Label();
+            this.lblLowVatValue.Location = new Point(220, 40);
+            this.lblLowVatValue.Size = new Size(100, 25);
+            this.lblLowVatValue.TextAlign = ContentAlignment.MiddleRight;
+            this.lblLowVatValue.Font = new Font("Segoe UI", 10);
+            this.lblLowVatValue.Text = "€0.00";
             
-            this.lblTotal = new Label();
-            this.lblTotal.Location = new Point(500, 325);
-            this.lblTotal.Size = new Size(70, 20);
-            this.lblTotal.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.lblTotal.TextAlign = ContentAlignment.MiddleRight;
+            // High VAT Amount (21%)
+            Label lblHighVat = new Label();
+            lblHighVat.Location = new Point(10, 70);
+            lblHighVat.Size = new Size(200, 25);
+            lblHighVat.Text = "High VAT Amount (21%):";
+            lblHighVat.TextAlign = ContentAlignment.MiddleLeft;
+            lblHighVat.Font = new Font("Segoe UI", 10);
             
-            // Existing payments panel
-            this.pnlExistingPayments = new Panel();
-            this.pnlExistingPayments.Location = new Point(20, 360);
-            this.pnlExistingPayments.Size = new Size(750, 150);
-            this.pnlExistingPayments.Visible = false;
+            this.lblHighVatValue = new Label();
+            this.lblHighVatValue.Location = new Point(220, 70);
+            this.lblHighVatValue.Size = new Size(100, 25);
+            this.lblHighVatValue.TextAlign = ContentAlignment.MiddleRight;
+            this.lblHighVatValue.Font = new Font("Segoe UI", 10);
+            this.lblHighVatValue.Text = "€0.00";
             
-            this.lblExistingPayments = new Label();
-            this.lblExistingPayments.Location = new Point(0, 0);
-            this.lblExistingPayments.Size = new Size(150, 25);
-            this.lblExistingPayments.Text = "Existing Payments:";
-            this.lblExistingPayments.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            // Total (incl. VAT)
+            Label lblTotal = new Label();
+            lblTotal.Location = new Point(10, 110);
+            lblTotal.Size = new Size(200, 25);
+            lblTotal.Text = "Total (incl. VAT):";
+            lblTotal.TextAlign = ContentAlignment.MiddleLeft;
+            lblTotal.Font = new Font("Segoe UI", 11, FontStyle.Bold);
             
-            this.lvExistingPayments = new ListView();
-            this.lvExistingPayments.Location = new Point(0, 25);
-            this.lvExistingPayments.Size = new Size(750, 80);
-            this.lvExistingPayments.View = View.Details;
-            this.lvExistingPayments.FullRowSelect = true;
-            this.lvExistingPayments.GridLines = true;
-            this.lvExistingPayments.Columns.Add("ID", 50);
-            this.lvExistingPayments.Columns.Add("Method", 100);
-            this.lvExistingPayments.Columns.Add("Amount", 80);
-            this.lvExistingPayments.Columns.Add("Tip", 80);
-            this.lvExistingPayments.Columns.Add("Total", 80);
+            this.lblTotalValue = new Label();
+            this.lblTotalValue.Location = new Point(220, 110);
+            this.lblTotalValue.Size = new Size(100, 25);
+            this.lblTotalValue.TextAlign = ContentAlignment.MiddleRight;
+            this.lblTotalValue.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            this.lblTotalValue.Text = "€0.00";
             
-            this.lblTotalPaid = new Label();
-            this.lblTotalPaid.Location = new Point(0, 110);
-            this.lblTotalPaid.Size = new Size(200, 25);
-            this.lblTotalPaid.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            // Optional Tip
+            Label lblTip = new Label();
+            lblTip.Location = new Point(400, 10);
+            lblTip.Size = new Size(150, 25);
+            lblTip.Text = "Optional Tip (€):";
+            lblTip.TextAlign = ContentAlignment.MiddleLeft;
+            lblTip.Font = new Font("Segoe UI", 10);
             
-            this.lblRemaining = new Label();
-            this.lblRemaining.Location = new Point(200, 110);
-            this.lblRemaining.Size = new Size(200, 25);
-            this.lblRemaining.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.txtTip = new TextBox();
+            this.txtTip.Location = new Point(550, 10);
+            this.txtTip.Size = new Size(100, 25);
+            this.txtTip.TextAlign = HorizontalAlignment.Right;
+            this.txtTip.Text = "0.00";
+            this.txtTip.TextChanged += new EventHandler(this.txtTip_TextChanged);
             
-            this.pnlExistingPayments.Controls.Add(this.lblExistingPayments);
-            this.pnlExistingPayments.Controls.Add(this.lvExistingPayments);
-            this.pnlExistingPayments.Controls.Add(this.lblTotalPaid);
-            this.pnlExistingPayments.Controls.Add(this.lblRemaining);
+            // Final Amount
+            Label lblFinalAmount = new Label();
+            lblFinalAmount.Location = new Point(400, 110);
+            lblFinalAmount.Size = new Size(150, 25);
+            lblFinalAmount.Text = "Final Amount:";
+            lblFinalAmount.TextAlign = ContentAlignment.MiddleLeft;
+            lblFinalAmount.Font = new Font("Segoe UI", 11, FontStyle.Bold);
             
-            // Payment panel
-            this.pnlPayment = new Panel();
-            this.pnlPayment.Location = new Point(20, 510);
-            this.pnlPayment.Size = new Size(750, 150);
+            this.lblFinalAmountValue = new Label();
+            this.lblFinalAmountValue.Location = new Point(550, 110);
+            this.lblFinalAmountValue.Size = new Size(100, 25);
+            this.lblFinalAmountValue.TextAlign = ContentAlignment.MiddleRight;
+            this.lblFinalAmountValue.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            this.lblFinalAmountValue.Text = "€0.00";
             
-            // Payment method group
-            this.grpPaymentMethod = new GroupBox();
-            this.grpPaymentMethod.Location = new Point(0, 0);
-            this.grpPaymentMethod.Size = new Size(250, 110);
-            this.grpPaymentMethod.Text = "Payment Method";
+            // Add controls to totals panel
+            totalsPanel.Controls.Add(lblSubtotal);
+            totalsPanel.Controls.Add(this.lblSubtotalValue);
+            totalsPanel.Controls.Add(lblLowVat);
+            totalsPanel.Controls.Add(this.lblLowVatValue);
+            totalsPanel.Controls.Add(lblHighVat);
+            totalsPanel.Controls.Add(this.lblHighVatValue);
+            totalsPanel.Controls.Add(lblTotal);
+            totalsPanel.Controls.Add(this.lblTotalValue);
+            totalsPanel.Controls.Add(lblTip);
+            totalsPanel.Controls.Add(this.txtTip);
+            totalsPanel.Controls.Add(lblFinalAmount);
+            totalsPanel.Controls.Add(this.lblFinalAmountValue);
+            
+            // Payment Method Section
+            Label lblPaymentMethod = new Label();
+            lblPaymentMethod.Location = new Point(20, 530);
+            lblPaymentMethod.Size = new Size(150, 25);
+            lblPaymentMethod.Text = "Payment Method:";
+            lblPaymentMethod.TextAlign = ContentAlignment.MiddleLeft;
+            lblPaymentMethod.Font = new Font("Segoe UI", 10);
             
             this.cmbPaymentMethod = new ComboBox();
-            this.cmbPaymentMethod.Location = new Point(20, 30);
-            this.cmbPaymentMethod.Size = new Size(210, 25);
+            this.cmbPaymentMethod.Location = new Point(170, 530);
+            this.cmbPaymentMethod.Size = new Size(200, 25);
             this.cmbPaymentMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             
-            this.lblTipAmount = new Label();
-            this.lblTipAmount.Location = new Point(20, 65);
-            this.lblTipAmount.Size = new Size(80, 25);
-            this.lblTipAmount.Text = "Tip Amount:";
-            this.lblTipAmount.TextAlign = ContentAlignment.MiddleLeft;
+            // Feedback Section
+            Label lblFeedbackType = new Label();
+            lblFeedbackType.Location = new Point(20, 570);
+            lblFeedbackType.Size = new Size(150, 25);
+            lblFeedbackType.Text = "Feedback Type:";
+            lblFeedbackType.TextAlign = ContentAlignment.MiddleLeft;
+            lblFeedbackType.Font = new Font("Segoe UI", 10);
             
-            this.txtTipAmount = new TextBox();
-            this.txtTipAmount.Location = new Point(110, 65);
-            this.txtTipAmount.Size = new Size(120, 25);
-            this.txtTipAmount.Text = "0.00";
+            this.cmbFeedbackType = new ComboBox();
+            this.cmbFeedbackType.Location = new Point(170, 570);
+            this.cmbFeedbackType.Size = new Size(200, 25);
+            this.cmbFeedbackType.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbFeedbackType.SelectedIndexChanged += new EventHandler(this.cmbFeedbackType_SelectedIndexChanged);
             
-            this.grpPaymentMethod.Controls.Add(this.cmbPaymentMethod);
-            this.grpPaymentMethod.Controls.Add(this.lblTipAmount);
-            this.grpPaymentMethod.Controls.Add(this.txtTipAmount);
-            
-            // Feedback group
-            this.grpFeedback = new GroupBox();
-            this.grpFeedback.Location = new Point(270, 0);
-            this.grpFeedback.Size = new Size(350, 110);
-            this.grpFeedback.Text = "Customer Feedback";
-            
-            this.rdoComment = new RadioButton();
-            this.rdoComment.Location = new Point(20, 25);
-            this.rdoComment.Size = new Size(100, 20);
-            this.rdoComment.Text = "Comment";
-            this.rdoComment.Checked = true;
-            
-            this.rdoComplaint = new RadioButton();
-            this.rdoComplaint.Location = new Point(120, 25);
-            this.rdoComplaint.Size = new Size(100, 20);
-            this.rdoComplaint.Text = "Complaint";
-            
-            this.rdoCommendation = new RadioButton();
-            this.rdoCommendation.Location = new Point(220, 25);
-            this.rdoCommendation.Size = new Size(120, 20);
-            this.rdoCommendation.Text = "Commendation";
+            Label lblFeedback = new Label();
+            lblFeedback.Location = new Point(20, 610);
+            lblFeedback.Size = new Size(150, 25);
+            lblFeedback.Text = "Feedback:";
+            lblFeedback.TextAlign = ContentAlignment.MiddleLeft;
+            lblFeedback.Font = new Font("Segoe UI", 10);
             
             this.txtFeedback = new TextBox();
-            this.txtFeedback.Location = new Point(20, 50);
-            this.txtFeedback.Size = new Size(310, 50);
+            this.txtFeedback.Location = new Point(170, 610);
+            this.txtFeedback.Size = new Size(610, 80);
             this.txtFeedback.Multiline = true;
+            this.txtFeedback.Enabled = false;
             
-            this.grpFeedback.Controls.Add(this.rdoComment);
-            this.grpFeedback.Controls.Add(this.rdoComplaint);
-            this.grpFeedback.Controls.Add(this.rdoCommendation);
-            this.grpFeedback.Controls.Add(this.txtFeedback);
-            
-            this.pnlPayment.Controls.Add(this.grpPaymentMethod);
-            this.pnlPayment.Controls.Add(this.grpFeedback);
-
-            // Buttons
-            /*
-            this.btnSplitBill = new Button();
-            this.btnSplitBill.Location = new Point(600, 60);
-            this.btnSplitBill.Size = new Size(150, 40);
-            this.btnSplitBill.Text = "Split Bill";
-            this.btnSplitBill.Click += new EventHandler(this.btnSplitBill_Click);
-            
+            // Process Payment Button
             this.btnProcessPayment = new Button();
-            this.btnProcessPayment.Location = new Point(630, 530);
-            this.btnProcessPayment.Size = new Size(150, 50);
+            this.btnProcessPayment.Location = new Point(450, 700);
+            this.btnProcessPayment.Size = new Size(160, 50);
             this.btnProcessPayment.Text = "Process Payment";
             this.btnProcessPayment.BackColor = Color.LightGreen;
+            this.btnProcessPayment.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             this.btnProcessPayment.Click += new EventHandler(this.btnProcessPayment_Click);
-            */
+            
+            // Cancel Button
+            this.btnCancel = new Button();
+            this.btnCancel.Location = new Point(620, 700);
+            this.btnCancel.Size = new Size(160, 50);
+            this.btnCancel.Text = "Cancel";
+            this.btnCancel.BackColor = Color.LightCoral;
+            this.btnCancel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            this.btnCancel.Click += new EventHandler(this.btnCancel_Click);
             
             // Add controls to form
-            this.Controls.Add(this.lvInvoiceItems);
-            this.Controls.Add(this.lblOrderInfo);
-            this.Controls.Add(this.lblSubtotalLabel);
-            this.Controls.Add(this.lblSubtotal);
-            this.Controls.Add(this.lblVatAmountLabel);
-            this.Controls.Add(this.lblVatAmount);
-            this.Controls.Add(this.lblTotalLabel);
-            this.Controls.Add(this.lblTotal);
-            this.Controls.Add(this.pnlExistingPayments);
-            this.Controls.Add(this.pnlPayment);
-            this.Controls.Add(this.btnSplitBill);
+            this.Controls.Add(this.lblHeader);
+            this.Controls.Add(this.lvOrderItems);
+            this.Controls.Add(totalsPanel);
+            this.Controls.Add(lblPaymentMethod);
+            this.Controls.Add(this.cmbPaymentMethod);
+            this.Controls.Add(lblFeedbackType);
+            this.Controls.Add(this.cmbFeedbackType);
+            this.Controls.Add(lblFeedback);
+            this.Controls.Add(this.txtFeedback);
             this.Controls.Add(this.btnProcessPayment);
+            this.Controls.Add(this.btnCancel);
+            
+            // Load event
+            this.Load += new EventHandler(this.PaymentForm_Load);
         }
+
+        #endregion
+
+        private Label lblHeader;
+        private ListView lvOrderItems;
+        private Label lblSubtotalValue;
+        private Label lblLowVatValue;
+        private Label lblHighVatValue;
+        private Label lblTotalValue;
+        private TextBox txtTip;
+        private Label lblFinalAmountValue;
+        private ComboBox cmbPaymentMethod;
+        private ComboBox cmbFeedbackType;
+        private TextBox txtFeedback;
+        private Button btnProcessPayment;
+        private Button btnCancel;
     }
 }

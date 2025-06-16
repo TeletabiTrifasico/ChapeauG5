@@ -9,75 +9,107 @@ namespace ChapeauService
     {
         private PaymentDao paymentDao;
         private InvoiceDao invoiceDao;
-        
+        private OrderDao orderDao;
+
         public PaymentService()
         {
             paymentDao = new PaymentDao();
             invoiceDao = new InvoiceDao();
+            orderDao = new OrderDao();
         }
-        
-        public Invoice GetInvoice(int orderId)
+
+        // Get order with all items for payment
+        public Order GetOrderForPayment(int orderId)
         {
-            // First check if an invoice already exists
-            Invoice existingInvoice = invoiceDao.GetInvoiceByOrderId(orderId);
+            return orderDao.GetOrderWithItemsById(orderId);
+        }
+
+        // Calculate VAT amounts for an order
+        public (decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) CalculateOrderTotals(List<OrderItem> orderItems)
+        {
+            decimal totalExVat = 0;
+            decimal lowVatAmount = 0;  // 9% VAT
+            decimal highVatAmount = 0; // 21% VAT
             
-            if (existingInvoice != null)
+            foreach (OrderItem item in orderItems)
             {
-                // Load payments for this invoice
-                existingInvoice.Payments = paymentDao.GetPaymentsByInvoiceId(existingInvoice.InvoiceId);
-                return existingInvoice;
-            }
-            
-            // Generate a new invoice from order items
-            Invoice newInvoice = invoiceDao.GenerateInvoiceForOrder(orderId);
-            
-            // If there are no items or all items are zero, there's an issue
-            if (newInvoice.Items.Count == 0 || newInvoice.TotalAmount <= 0)
-            {
-                return null;
-            }
-            
-            // Save the new invoice to the database
-            newInvoice.InvoiceId = invoiceDao.CreateInvoice(newInvoice);
-            newInvoice.Payments = new List<Payment>();
-            
-            return newInvoice;
-        }
-        
-        public List<Invoice> SplitInvoice(Invoice invoice, int numberOfPeople)
-        {
-            return invoice.SplitInvoice(numberOfPeople);
-        }
-        
-        public int ProcessPayment(Payment payment)
-        {
-            return paymentDao.RegisterPayment(payment);
-        }
-        
-        public List<Payment> GetPaymentsByInvoiceId(int invoiceId)
-        {
-            return paymentDao.GetPaymentsByInvoiceId(invoiceId);
-        }
-        
-        public bool IsOrderPaid(int orderId)
-        {
-            Invoice invoice = invoiceDao.GetInvoiceByOrderId(orderId);
-            if (invoice == null)
-                return false;
+                decimal itemTotal = item.Quantity * item.MenuItemId.Price;
+                decimal itemVat;
                 
-            List<Payment> payments = paymentDao.GetPaymentsByInvoiceId(invoice.InvoiceId);
-            
-            if (payments.Count == 0)
-                return false;
+                if (item.MenuItemId.IsAlcoholic)
+                {
+                    // High VAT rate (21%)
+                    itemVat = itemTotal * 0.21m;
+                    highVatAmount += itemVat;
+                }
+                else
+                {
+                    // Low VAT rate (9%)
+                    itemVat = itemTotal * 0.09m;
+                    lowVatAmount += itemVat;
+                }
                 
-            decimal totalPaid = 0;
-            foreach (Payment payment in payments)
-            {
-                totalPaid += payment.FinalAmount;
+                totalExVat += itemTotal - itemVat;
             }
             
-            // Order is considered paid if total payment is equal to or greater than invoice total
-            return totalPaid >= (invoice.TotalAmount + invoice.TotalVat);
+            decimal totalWithVat = totalExVat + lowVatAmount + highVatAmount;
+            
+            return (totalExVat, lowVatAmount, highVatAmount, totalWithVat);
+        }
+
+        // Create an invoice for an order
+        public int CreateInvoice(int orderId, decimal totalAmount, decimal totalVat, 
+                               decimal lowVatAmount, decimal highVatAmount, 
+                               decimal totalExcludingVat, decimal tipAmount)
+        {
+            Invoice invoice = new Invoice
+            {
+                OrderId = new Order { OrderId = orderId },
+                TotalAmount = totalAmount,
+                TotalVat = totalVat,
+                // Store the calculated VAT values for reference
+                LowVatAmount = lowVatAmount,
+                HighVatAmount = highVatAmount,
+                TotalExcludingVat = totalExcludingVat,
+                TotalTipAmount = tipAmount,
+                CreatedAt = DateTime.Now
+            };
+            
+            return invoiceDao.CreateInvoice(invoice);
+        }
+
+        // Process payment for an invoice
+        public int ProcessPayment(int invoiceId, PaymentMethod paymentMethod, 
+                                decimal amount, string feedback, FeedbackType feedbackType)
+        {
+            // Get the full invoice object from the database instead of creating a new one
+            Invoice invoice = invoiceDao.GetInvoiceById(invoiceId);
+            
+            Payment payment = new Payment
+            {
+                InvoiceId = invoice, // Use the full invoice object with tip amount
+                PaymentMethod = paymentMethod,
+                Amount = amount,
+                Feedback = feedback,
+                FeedbackType = feedbackType,
+                CreatedAt = DateTime.Now
+            };
+            
+            int paymentId = paymentDao.CreatePayment(payment);
+            
+            // Mark the order as done
+            if (invoice != null)
+            {
+                orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
+            }
+            
+            return paymentId;
+        }
+
+        // Check if an order has an existing invoice
+        public Invoice GetInvoiceForOrder(int orderId)
+        {
+            return invoiceDao.GetInvoiceByOrderId(orderId);
         }
     }
 }

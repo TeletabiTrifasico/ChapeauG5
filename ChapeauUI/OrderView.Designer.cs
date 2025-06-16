@@ -272,41 +272,6 @@ namespace ChapeauG5
                     return;
                 }
                 
-                // Ensure all items are marked as served
-                bool allServed = true;
-                foreach (OrderItem item in orderItems)
-                {
-                    if (item.Status != OrderItem.OrderStatus.Served)
-                    {
-                        allServed = false;
-                        break;
-                    }
-                }
-                
-                if (!allServed)
-                {
-                    DialogResult result = MessageBox.Show(
-                        "Not all items are marked as served. Mark all as served and continue to payment?",
-                        "Items Not Served",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                        
-                    if (result == DialogResult.Yes)
-                    {
-                        // Mark all items as served
-                        orderService.MarkAllItemsAsServed(currentOrderId.Value);
-                        
-                        // Refresh order items
-                        orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
-                        RefreshOrderItemsView();
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                
-                // Open the payment form
                 PaymentForm paymentForm = new PaymentForm(currentOrderId.Value, loggedInEmployee);
                 
                 // Show the payment form as a dialog
