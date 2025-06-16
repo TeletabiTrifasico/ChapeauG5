@@ -81,7 +81,8 @@ namespace ChapeauG5
             
             foreach (OrderItem item in currentOrder.OrderItems)
             {
-                string vatRate = item.MenuItemId.IsAlcoholic ? "21%" : "9%";
+                // Get VAT rate directly from the menu item
+                string vatRate = item.MenuItemId.VatPercentage == 21 ? "21%" : "9%";
                 decimal subtotal = item.Quantity * item.MenuItemId.Price;
                 
                 ListViewItem lvi = new ListViewItem(item.MenuItemId.Name);

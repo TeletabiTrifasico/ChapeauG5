@@ -36,7 +36,10 @@ namespace ChapeauService
                 decimal itemTotal = item.Quantity * item.MenuItemId.Price;
                 decimal itemVat;
                 
-                if (item.MenuItemId.IsAlcoholic)
+                // Use the VAT percentage directly from the menu_item table
+                int vatPercentage = item.MenuItemId.VatPercentage;
+                
+                if (vatPercentage == 21)
                 {
                     // High VAT rate (21%)
                     itemVat = itemTotal * 0.21m;
@@ -49,6 +52,7 @@ namespace ChapeauService
                     lowVatAmount += itemVat;
                 }
                 
+                // Calculate price excluding VAT
                 totalExVat += itemTotal - itemVat;
             }
             
