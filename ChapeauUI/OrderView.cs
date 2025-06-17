@@ -35,30 +35,28 @@ namespace ChapeauG5
         {
             lblTable.Text = $"Table {selectedTable.TableNumber}";
             
-            // Don't mark as occupied yet - only when order is confirmed
+            // Doesn't mark as occupied yet - only when order is confirmed
             
-            // Load menu categories
+            // Loads menu categories
             LoadMenuCategories();
             
-            // Check if there's an existing order for this table
+            // Checks if there's an existing order for this table
             Order existingOrder = orderService.GetOrderByTableId(selectedTable.TableId);
             
             if (existingOrder != null)
             {
-                // Load existing order
+                // Loads existing order
                 currentOrderId = existingOrder.OrderId;
                 isExistingOrder = true;
                 
-                // Load existing items from database
+                // Loads existing items from database
                 orderedItems = orderService.GetOrderItemsByOrderId(existingOrder.OrderId);
                 LoadOrderedItems();
                 
-                // If it's an existing order, set the table as occupied
+                // If it's an existing order, sets the table as occupied
                 tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
             }
-            // Don't create a new order yet - wait for confirmation
             
-            // Initially disable the payment button until all items are served
             UpdatePaymentButtonState();
         }
         
@@ -155,7 +153,7 @@ namespace ChapeauG5
             lvOrderItems.Items.Clear();
             foreach (OrderItem item in newOrderItems)
             {
-                // Create a safer way to access these properties
+                // Creates a safer way to access these properties
                 string itemName = GetItemName(item);
                 string quantity = item.Quantity.ToString();
                 string status = GetItemStatus(item);
@@ -175,17 +173,17 @@ namespace ChapeauG5
 
             lvOrderItems.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
 
-            // Enable/disable buttons based on whether we have items
+            // Enables/disables buttons based on whether we have items
             btnRemoveItem.Enabled = newOrderItems.Count > 0;
             btnEditItem.Enabled = newOrderItems.Count > 0;
             btnSaveOrder.Enabled = newOrderItems.Count > 0;
         }
-        
+
         private void LoadOrderedItems()
         {
             try
             {
-                // Ensure ListView is initialized
+                // Ensures ListView is initialized
                 if (orderedList == null)
                 {
                     Console.WriteLine("ListView not initialized");
@@ -197,7 +195,7 @@ namespace ChapeauG5
 
                 foreach (OrderItem item in orderedItems)
                 {
-                    // Create a safer way to access these properties
+                    // Creates a safer way to access these properties
                     string itemName = GetItemName(item);
                     string quantity = item.Quantity.ToString();
                     string status = GetItemStatus(item);
@@ -235,78 +233,6 @@ namespace ChapeauG5
             }
         }
 
-
-
-
-
-
-        // --- This part is currently not in use ---
-
-        //private void RefreshOrderItemsView()
-        //{
-        //    try
-        //    {
-        //        // Ensure ListView is initialized
-        //        if (lvOrderItems == null)
-        //        {
-        //            Console.WriteLine("ListView not initialized");
-        //            return;
-        //        }
-
-        //        lvOrderItems.Items.Clear();
-        //        decimal orderTotal = 0;
-
-        //        foreach (OrderItem item in orderItems)
-        //        {
-        //            // Create a safer way to access these properties
-        //            string itemName = GetItemName(item);
-        //            string quantity = item.Quantity.ToString();
-        //            string status = GetItemStatus(item);
-        //            //string comment = item.Comment ?? string.Empty;
-
-        //            ListViewItem lvi = new ListViewItem(itemName);
-        //            lvi.SubItems.Add(quantity);
-        //            lvi.SubItems.Add(status);
-        //            //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
-
-        //            lvi.Tag = item;
-        //            lvOrderItems.Items.Add(lvi);
-
-        //        }
-
-        //        // Update the order total
-        //        if (lblOrderTotal != null)
-        //        {
-        //            lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
-        //            lblOrderTotal.Visible = true;
-        //        }
-
-        //        // Enable/disable buttons based on whether we have items
-        //        btnRemoveItem.Enabled = orderItems.Count > 0;
-        //        btnEditItem.Enabled = orderItems.Count > 0;
-        //        btnSaveOrder.Enabled = orderItems.Count > 0;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error in RefreshOrderItemsView: {ex.Message}");
-        //        MessageBox.Show($"Error refreshing order items: {ex.Message}", 
-        //            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //    }
-
-        //    // Enable/disable Mark as Served button if we have items
-        //    btnMarkServed.Enabled = orderItems.Count > 0 && isExistingOrder;
-
-        //    // Update payment button state
-        //    UpdatePaymentButtonState();
-        //}
-
-        // --- End of unused part ---
-
-
-
-
-
-        // Add this method to save the entire order at once
         private void btnSaveOrder_Click(object sender, EventArgs e)
         {
             try
@@ -362,7 +288,7 @@ namespace ChapeauG5
             }
         }
 
-        // Add this method to remove items from the order
+        // Remove items from the order
         private void btnRemoveItem_Click(object sender, EventArgs e)
         {
             if (lvOrderItems.SelectedItems.Count == 0)
@@ -395,7 +321,7 @@ namespace ChapeauG5
             ListNewOrders();
         }
         
-        // Add this method to edit items in the order
+        // Edit items in the order
         private void btnEditItem_Click(object sender, EventArgs e)
         {
             if (lvOrderItems.SelectedItems.Count == 0)
@@ -546,8 +472,6 @@ namespace ChapeauG5
             this.Close();
         }
 
-        // Add this new method for the button click event
-
         private void btnMarkServed_Click(object sender, EventArgs e)
         {
             if (orderedList.SelectedItems.Count == 0)
@@ -599,7 +523,6 @@ namespace ChapeauG5
             }
         }
 
-        // Add this method to check if all items are served and update the Payment button state
         private void UpdatePaymentButtonState()
         {
             bool allServed = true;
@@ -627,5 +550,73 @@ namespace ChapeauG5
                 btnPayment.BackColor = Color.LightBlue;
             }
         }
+
+        // --- This part is currently not in use ---
+
+        //private void RefreshOrderItemsView()
+        //{
+        //    try
+        //    {
+        //        // Ensure ListView is initialized
+        //        if (lvOrderItems == null)
+        //        {
+        //            Console.WriteLine("ListView not initialized");
+        //            return;
+        //        }
+
+        //        lvOrderItems.Items.Clear();
+        //        decimal orderTotal = 0;
+
+        //        foreach (OrderItem item in orderItems)
+        //        {
+        //            // Create a safer way to access these properties
+        //            string itemName = GetItemName(item);
+        //            string quantity = item.Quantity.ToString();
+        //            string status = GetItemStatus(item);
+        //            //string comment = item.Comment ?? string.Empty;
+
+        //            ListViewItem lvi = new ListViewItem(itemName);
+        //            lvi.SubItems.Add(quantity);
+        //            lvi.SubItems.Add(status);
+        //            //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
+
+        //            lvi.Tag = item;
+        //            lvOrderItems.Items.Add(lvi);
+
+        //        }
+
+        //        // Update the order total
+        //        if (lblOrderTotal != null)
+        //        {
+        //            lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
+        //            lblOrderTotal.Visible = true;
+        //        }
+
+        //        // Enable/disable buttons based on whether we have items
+        //        btnRemoveItem.Enabled = orderItems.Count > 0;
+        //        btnEditItem.Enabled = orderItems.Count > 0;
+        //        btnSaveOrder.Enabled = orderItems.Count > 0;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error in RefreshOrderItemsView: {ex.Message}");
+        //        MessageBox.Show($"Error refreshing order items: {ex.Message}", 
+        //            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+
+        //    // Enable/disable Mark as Served button if we have items
+        //    btnMarkServed.Enabled = orderItems.Count > 0 && isExistingOrder;
+
+        //    // Update payment button state
+        //    UpdatePaymentButtonState();
+        //}
+
+        // --- End of unused part ---
+
+
+
+
+
+        // Add this method to save the entire order at once
     }
 }
