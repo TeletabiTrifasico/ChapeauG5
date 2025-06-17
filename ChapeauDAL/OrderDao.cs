@@ -17,9 +17,7 @@ namespace ChapeauDAL
 
             SqlParameter[] parameters = new SqlParameter[]
             {
-                // Extract the TableId value from the Table object
                 new SqlParameter("@TableId", order.TableId != null ? order.TableId.TableId : (object)DBNull.Value),
-                // Extract the EmployeeId value from the Employee object
                 new SqlParameter("@EmployeeId", order.EmployeeId != null ? order.EmployeeId.EmployeeId : (object)DBNull.Value),
                 new SqlParameter("@CreatedAt", order.CreatedAt),
                 new SqlParameter("@IsDone", order.IsDone)
@@ -41,7 +39,6 @@ namespace ChapeauDAL
                 new SqlParameter("@Quantity", item.Quantity),
                 new SqlParameter("@Comment", string.IsNullOrEmpty(item.Comment) ? (object)DBNull.Value : item.Comment),
                 new SqlParameter("@CreatedAt", item.CreatedAt),
-                // Fix: Use OrderStatus enum instead of Status
                 new SqlParameter("@Status", item.Status.ToString())
             };
 
@@ -163,11 +160,10 @@ namespace ChapeauDAL
             {
                 OrderId = (int)dr["order_id"],
                 TableId = new Table { TableId = (int)dr["table_id"] },
-                // Just provide a reference to the ID, we'll load the rest later if needed
                 EmployeeId = new Employee
                 {
                     EmployeeId = employeeId,
-                    Username = "temp",  // Required fields with temporary values
+                    Username = "temp",
                     PasswordHash = "temp",
                     FirstName = "temp",
                     LastName = "temp",
@@ -314,7 +310,6 @@ namespace ChapeauDAL
             ExecuteEditQuery(query, parameters);
         }
 
-        // Add this new method to update a specific order item's status
         public void MarkOrderItemAsServed(int orderItemId)
         {
             string query = @"
