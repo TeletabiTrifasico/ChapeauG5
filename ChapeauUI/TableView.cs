@@ -19,6 +19,11 @@ namespace ChapeauG5
         {
             InitializeComponent();
 
+            for (int i = 0; i < 5; i++)
+                tlpTables.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+            for (int i = 0; i < 2; i++)
+                tlpTables.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+
             if (employee == null)
             {
                 MessageBox.Show("Employee is null in TableView constructor!");
@@ -32,8 +37,10 @@ namespace ChapeauG5
             orderService = new OrderService();
 
             lblWelcome.Text = $"Welcome, {employee.FirstName}!";
+
+            
         }
-        
+
         private void TableView_Load(object sender, EventArgs e)
         {
             RefreshTables();
@@ -174,7 +181,13 @@ namespace ChapeauG5
             loginForm.Show();
             this.Hide();
         }
-        
+
+        private void btnMenuView_Click(object sender, EventArgs e)
+        {
+            var menuView = new MenuView(loggedInEmployee);
+            menuView.ShowDialog();
+        }
+
         private Image GetRefreshIcon()
         {
             // Use a system icon or a custom one if available

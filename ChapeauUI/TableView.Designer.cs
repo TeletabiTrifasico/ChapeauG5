@@ -65,8 +65,18 @@ namespace ChapeauG5
             this.btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             this.btnLogout.Click += new EventHandler(this.btnLogout_Click);
 
+            // --- Menu View Button ---
+            this.btnMenuView = new Button();
+            this.btnMenuView.Size = new Size(200, 40);
+            this.btnMenuView.Text = "Menu View";
+            this.btnMenuView.BackColor = Color.LightGray;
+            this.btnMenuView.Location = new Point(this.btnLogout.Left - this.btnMenuView.Width - 10, 10);
+            this.btnMenuView.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnMenuView.Click += new EventHandler(this.btnMenuView_Click);
+
             // Add controls to navbar
             this.panelNavBar.Controls.Add(this.btnLogout);
+            this.panelNavBar.Controls.Add(this.btnMenuView);
             this.Controls.Add(this.panelNavBar);
             this.panelNavBar.Controls.Add(this.lblTables);
 
@@ -88,10 +98,8 @@ namespace ChapeauG5
             this.tlpTables.RowCount = 2;
             this.tlpTables.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
 
-            for (int i = 0; i < 5; i++)
-                this.tlpTables.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            for (int i = 0; i < 2; i++)
-                this.tlpTables.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            this.tlpTables.ColumnCount = 5;
+            this.tlpTables.RowCount = 2;
 
             this.tlpTables.Dock = DockStyle.None;
             this.tlpTables.Anchor = AnchorStyles.None;
@@ -107,6 +115,7 @@ namespace ChapeauG5
         private TableLayoutPanel tlpTables;
         private Label lblWelcome;
         private Button btnLogout;
+        private Button btnMenuView;
         private Panel panelNavBar;
         private Label lblTables;
     }
