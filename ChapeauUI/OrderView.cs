@@ -161,16 +161,18 @@ namespace ChapeauG5
                 
                 foreach (OrderItem item in orderItems)
                 {
-                    // Create a safer way to access these properties
+                    // Creates a safer way to access these properties
                     string itemName = GetItemName(item);
                     string quantity = item.Quantity.ToString();
                     string status = GetItemStatus(item);
-                    //string comment = item.Comment ?? string.Empty;
+                    string comment = item.Comment ?? string.Empty;
 
                     ListViewItem lvi = new ListViewItem(itemName);
                     lvi.SubItems.Add(quantity);
+                    lvi.SubItems.Add($"€{GetItemPrice(item):0.00}"); // Price
+                    lvi.SubItems.Add($"€{(int.Parse(quantity) * GetItemPrice(item)):0.00}"); // Total Price
                     lvi.SubItems.Add(status);
-                    //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
+                    lvi.SubItems.Add(item.Comment ?? string.Empty);
 
                     lvi.Tag = item;
                     lvOrderItems.Items.Add(lvi);
