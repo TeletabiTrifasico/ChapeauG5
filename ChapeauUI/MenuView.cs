@@ -1,5 +1,14 @@
-using ChapeauModel;
+﻿using ChapeauModel;
 using ChapeauService;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ChapeauG5
 {
@@ -17,108 +26,55 @@ namespace ChapeauG5
 
         private void MenuView_Load(object sender, EventArgs e)
         {
-            lblWelcome.Text = $"Welcome, {loggedInEmployee.FirstName}!";
-            LoadMenuItems();
+            // Loading the menu categories when the form loads
+            LoadMenuCategories();
         }
 
-        private void LoadMenuItems()
+        private void LoadMenuCategories()
         {
-            List<MenuItem> menuItems = menuService.GetAllMenuItems();
-            flpMenuItems.Controls.Clear();
+            categoryList.Items.Clear();
 
-            foreach (MenuItem item in menuItems)
+            List<MenuCategory> categories = menuService.GetAllCategories();
+
+            foreach (MenuCategory category in categories)
             {
-                Button btnItem = new Button
+                categoryList.Items.Add(category);
+            }
+
+            if (categoryList.Items.Count > 0)
+                categoryList.SelectedIndex = 0;
+        }
+        private void categoryList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (categoryList.SelectedItem is MenuCategory selectedCategory)
+            {
+                // Load menu items for the selected category
+                List<MenuItem> menuItems = menuService.GetMenuItemsByCategory(selectedCategory.CategoryId);
+
+                menuList.Items.Clear();
+
+                foreach (MenuItem item in menuItems)
                 {
-                    Text = $"{item.Name}\n{item.Price:C}",
-                    Size = new Size(150, 100),
-                    Tag = item,
-                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.LightBlue
-                };
-                btnItem.Click += BtnItem_Click;
-                flpMenuItems.Controls.Add(btnItem);
+                    ListViewItem lvi = new ListViewItem(item.Name);
+                    lvi.SubItems.Add($"€{item.Price:0.00}");
+                    lvi.SubItems.Add(GetStockStatus(item.Stock));
+                    lvi.SubItems.Add(item.Description);
+                    lvi.Tag = item;
+
+                    menuList.Items.Add(lvi);
+                }
+                menuList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             }
         }
 
-        private void BtnItem_Click(object sender, EventArgs e)
+        private string GetStockStatus(int stock)
         {
-            Button btn = sender as Button;
-            if (btn != null && btn.Tag is MenuItem item)
-            {
-                MessageBox.Show($"You selected: {item.Name}\nPrice: {item.Price:C}", "Menu Item Selected");
-            }
-        }
-        private ComboBox cardList;
-        private ComboBox categoryList;
-        private Label label1;
-        private Label label2;
-        private ListView menuList;
-
-        private void InitializeComponent()
-        {
-            cardList = new ComboBox();
-            categoryList = new ComboBox();
-            label1 = new Label();
-            label2 = new Label();
-            menuList = new ListView();
-            SuspendLayout();
-            // 
-            // cardList
-            // 
-            cardList.FormattingEnabled = true;
-            cardList.Location = new Point(125, 56);
-            cardList.Name = "cardList";
-            cardList.Size = new Size(242, 40);
-            cardList.TabIndex = 0;
-            // 
-            // categoryList
-            // 
-            categoryList.FormattingEnabled = true;
-            categoryList.Location = new Point(609, 56);
-            categoryList.Name = "categoryList";
-            categoryList.Size = new Size(242, 40);
-            categoryList.TabIndex = 1;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(51, 59);
-            label1.Name = "label1";
-            label1.Size = new Size(68, 32);
-            label1.TabIndex = 2;
-            label1.Text = "Card:";
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(488, 59);
-            label2.Name = "label2";
-            label2.Size = new Size(115, 32);
-            label2.TabIndex = 3;
-            label2.Text = "Category:";
-            // 
-            // menuList
-            // 
-            menuList.Location = new Point(51, 136);
-            menuList.Name = "menuList";
-            menuList.Size = new Size(1100, 542);
-            menuList.TabIndex = 4;
-            menuList.UseCompatibleStateImageBehavior = false;
-            // 
-            // MenuView
-            // 
-            ClientSize = new Size(1211, 742);
-            Controls.Add(menuList);
-            Controls.Add(label2);
-            Controls.Add(label1);
-            Controls.Add(categoryList);
-            Controls.Add(cardList);
-            Name = "MenuView";
-            ResumeLayout(false);
-            PerformLayout();
-
+            if (stock > 10)
+                return "In Stock";
+            else if (stock > 0 && stock <= 10)
+                return "Low Stock";
+            else
+                return "Out of Stock";
         }
     }
 }
