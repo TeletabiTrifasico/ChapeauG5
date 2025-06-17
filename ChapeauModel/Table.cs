@@ -4,9 +4,8 @@ namespace ChapeauModel
 {
     public enum TableStatus
     {
-        Free,       // Changed from Available to Free
+        Free,     
         Occupied,
-        Reserved
     }
     
     public class Table
