@@ -21,8 +21,6 @@ namespace ChapeauG5
         private decimal highVatAmount = 0;
         private decimal totalWithVat = 0;
         private decimal tipAmount = 0;
-        
-        // Add these variables to the class
         private bool isSplittingBill = false;
         private int numberOfSplits = 2;
         private int currentSplitIndex = 0;
@@ -421,7 +419,6 @@ namespace ChapeauG5
                 btnCancel.Location = new Point(290, 270);
                 btnCancel.Size = new Size(80, 30);
                 
-                // Add controls to the form
                 paymentDialog.Controls.Add(lblAmount);
                 paymentDialog.Controls.Add(lblMethod);
                 paymentDialog.Controls.Add(cmbMethod);
@@ -486,7 +483,7 @@ namespace ChapeauG5
                 else
                 {
                     // User canceled - need to clean up partially processed payments
-                    MessageBox.Show("Payment process was canceled. Previous payments for this bill have been saved.", 
+                    MessageBox.Show("Payment process was canceled.", 
                         "Payment Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.DialogResult = DialogResult.Cancel;
                     this.Close();

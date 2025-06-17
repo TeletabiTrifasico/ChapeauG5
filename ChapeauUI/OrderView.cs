@@ -15,7 +15,8 @@ namespace ChapeauG5
         private OrderService orderService;
         private TableService tableService;
         private int? currentOrderId; // Make nullable since we might not have an order yet
-        private List<OrderItem> orderItems; // This will be our temporary in-memory list
+        private List<OrderItem> orderedItems;
+        private List<OrderItem> newOrderItems; // This will be our temporary in-memory list
         private bool isExistingOrder = false;
         
         public OrderView(Employee employee, Table table)
@@ -26,37 +27,36 @@ namespace ChapeauG5
             menuService = new MenuService();
             orderService = new OrderService();
             tableService = new TableService();
-            orderItems = new List<OrderItem>();
+            orderedItems = new List<OrderItem>();
+            newOrderItems = new List<OrderItem>();
         }
         
         private void OrderView_Load(object sender, EventArgs e)
         {
             lblTable.Text = $"Table {selectedTable.TableNumber}";
             
-            // Don't mark as occupied yet - only when order is confirmed
+            // Doesn't mark as occupied yet - only when order is confirmed
             
-            // Load menu categories
+            // Loads menu categories
             LoadMenuCategories();
             
-            // Check if there's an existing order for this table
+            // Checks if there's an existing order for this table
             Order existingOrder = orderService.GetOrderByTableId(selectedTable.TableId);
             
             if (existingOrder != null)
             {
-                // Load existing order
+                // Loads existing order
                 currentOrderId = existingOrder.OrderId;
                 isExistingOrder = true;
                 
-                // Load existing items from database
-                orderItems = orderService.GetOrderItemsByOrderId(existingOrder.OrderId);
-                RefreshOrderItemsView();
+                // Loads existing items from database
+                orderedItems = orderService.GetOrderItemsByOrderId(existingOrder.OrderId);
+                LoadOrderedItems();
                 
-                // If it's an existing order, set the table as occupied
+                // If it's an existing order, sets the table as occupied
                 tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
             }
-            // Don't create a new order yet - wait for confirmation
             
-            // Initially disable the payment button until all items are served
             UpdatePaymentButtonState();
         }
         
@@ -93,6 +93,8 @@ namespace ChapeauG5
                     
                     lvMenuItems.Items.Add(lvi);
                 }
+
+                lvMenuItems.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             }
         }
         
@@ -128,10 +130,10 @@ namespace ChapeauG5
             };
             
             // Add to our local list
-            orderItems.Add(newItem);
-            
-            // Refresh the display only
-            RefreshOrderItemsView();
+            newOrderItems.Add(newItem);
+
+            // Add the item to the ListView
+            ListNewOrders();
             
             // Clear inputs
             nudQuantity.Value = 1;
@@ -144,71 +146,98 @@ namespace ChapeauG5
             MessageBox.Show($"{quantity}x {selectedItem.Name} added to order.", "Item Added", 
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
-        
-        private void RefreshOrderItemsView()
+
+        // This method will list new orders in the temporary ListView
+        private void ListNewOrders()
+        {
+            lvOrderItems.Items.Clear();
+            foreach (OrderItem item in newOrderItems)
+            {
+                // Creates a safer way to access these properties
+                string itemName = GetItemName(item);
+                string quantity = item.Quantity.ToString();
+                string status = GetItemStatus(item);
+                string comment = item.Comment ?? string.Empty;
+
+                ListViewItem lvi = new ListViewItem(itemName);
+                lvi.SubItems.Add(quantity);
+                lvi.SubItems.Add($"€{GetItemPrice(item):0.00}"); // Price
+                lvi.SubItems.Add($"€{(int.Parse(quantity) * GetItemPrice(item)):0.00}"); // Total Price
+                lvi.SubItems.Add(status);
+                lvi.SubItems.Add(item.Comment ?? string.Empty);
+
+                lvi.Tag = item;
+                lvOrderItems.Items.Add(lvi);
+
+            }
+
+            lvOrderItems.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+
+            // Enables/disables buttons based on whether we have items
+            btnRemoveItem.Enabled = newOrderItems.Count > 0;
+            btnEditItem.Enabled = newOrderItems.Count > 0;
+            btnSaveOrder.Enabled = newOrderItems.Count > 0;
+        }
+
+        private void LoadOrderedItems()
         {
             try
             {
-                // Ensure ListView is initialized
-                if (lvOrderItems == null)
+                // Ensures ListView is initialized
+                if (orderedList == null)
                 {
                     Console.WriteLine("ListView not initialized");
                     return;
                 }
-                
-                lvOrderItems.Items.Clear();
+
+                orderedList.Items.Clear();
                 decimal orderTotal = 0;
-                
-                foreach (OrderItem item in orderItems)
+
+                foreach (OrderItem item in orderedItems)
                 {
-                    // Create a safer way to access these properties
+                    // Creates a safer way to access these properties
                     string itemName = GetItemName(item);
                     string quantity = item.Quantity.ToString();
                     string status = GetItemStatus(item);
-                    //string comment = item.Comment ?? string.Empty;
+                    string comment = item.Comment ?? string.Empty;
 
                     ListViewItem lvi = new ListViewItem(itemName);
                     lvi.SubItems.Add(quantity);
+                    lvi.SubItems.Add($"€{GetItemPrice(item):0.00}"); // Price
+                    lvi.SubItems.Add($"€{(int.Parse(quantity) * GetItemPrice(item)):0.00}"); // Total Price
                     lvi.SubItems.Add(status);
-                    //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
+                    lvi.SubItems.Add(item.Comment ?? string.Empty);
 
                     lvi.Tag = item;
-                    lvOrderItems.Items.Add(lvi);
+                    orderedList.Items.Add(lvi);
+
+                    // Calculate the order total
+                    orderTotal += int.Parse(quantity) * GetItemPrice(item);
 
                 }
-                
+
                 // Update the order total
                 if (lblOrderTotal != null)
                 {
                     lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
                     lblOrderTotal.Visible = true;
                 }
-                
-                // Enable/disable buttons based on whether we have items
-                btnRemoveItem.Enabled = orderItems.Count > 0;
-                btnEditItem.Enabled = orderItems.Count > 0;
-                btnSaveOrder.Enabled = orderItems.Count > 0;
+
+                orderedList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in RefreshOrderItemsView: {ex.Message}");
-                MessageBox.Show($"Error refreshing order items: {ex.Message}", 
+                MessageBox.Show($"Error refreshing order items: {ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            
-            // Enable/disable Mark as Served button if we have items
-            btnMarkServed.Enabled = orderItems.Count > 0 && isExistingOrder;
-            
-            // Update payment button state
-            UpdatePaymentButtonState();
         }
-        
-        // Add this method to save the entire order at once
+
         private void btnSaveOrder_Click(object sender, EventArgs e)
         {
             try
             {
-                if (orderItems.Count == 0)
+                if (newOrderItems.Count == 0)
                 {
                     MessageBox.Show("Please add at least one item to the order.", 
                         "Empty Order", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -227,7 +256,7 @@ namespace ChapeauG5
                 }
                 
                 // Now save each item
-                foreach (OrderItem item in orderItems)
+                foreach (OrderItem item in newOrderItems)
                 {
                     // Update the order ID in case we just created it
                     item.OrderId = new Order { OrderId = currentOrderId.Value };
@@ -247,8 +276,10 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 
                 // Refresh the order from the database with full MenuItem details
-                orderItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
-                RefreshOrderItemsView();
+                orderedItems = orderService.GetOrderItemsByOrderId(currentOrderId.Value);
+                newOrderItems.Clear(); // Clear the temporary list after saving 
+                lvOrderItems.Items.Clear();
+                LoadOrderedItems();
             }
             catch (Exception ex)
             {
@@ -256,8 +287,8 @@ namespace ChapeauG5
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        
-        // Add this method to remove items from the order
+
+        // Remove items from the order
         private void btnRemoveItem_Click(object sender, EventArgs e)
         {
             if (lvOrderItems.SelectedItems.Count == 0)
@@ -268,33 +299,29 @@ namespace ChapeauG5
             }
             
             OrderItem selectedItem = (OrderItem)lvOrderItems.SelectedItems[0].Tag;
-            
-            // If it's an existing order with items already in the database, we should warn the user
-            if (isExistingOrder && selectedItem.OrderItemId != 0)
+
+            if (selectedItem.OrderItemId != 0)
             {
                 DialogResult result = MessageBox.Show(
-                    "This item is already saved in the database. Are you sure you want to remove it?",
+                    "Are you sure you want to remove it?",
                     "Confirm Removal",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
-                    
+
                 if (result == DialogResult.No)
                 {
                     return;
                 }
-                
-                // Here we would need to implement a delete method in the OrderDao
-                // For now, we'll just remove it locally
             }
-            
+
             // Remove from our local list
-            orderItems.Remove(selectedItem);
-            
+            newOrderItems.Remove(selectedItem);
+
             // Refresh the display
-            RefreshOrderItemsView();
+            ListNewOrders();
         }
         
-        // Add this method to edit items in the order
+        // Edit items in the order
         private void btnEditItem_Click(object sender, EventArgs e)
         {
             if (lvOrderItems.SelectedItems.Count == 0)
@@ -310,7 +337,7 @@ namespace ChapeauG5
             using (Form editForm = new Form())
             {
                 editForm.Text = "Edit Order Item";
-                editForm.Size = new Size(300, 200);
+                editForm.Size = new Size(600, 400);
                 editForm.StartPosition = FormStartPosition.CenterParent;
                 editForm.FormBorderStyle = FormBorderStyle.FixedDialog;
                 editForm.MaximizeBox = false;
@@ -319,36 +346,36 @@ namespace ChapeauG5
                 Label lblQuantity = new Label();
                 lblQuantity.Text = "Quantity:";
                 lblQuantity.Location = new Point(20, 20);
-                lblQuantity.Size = new Size(70, 20);
+                lblQuantity.Size = new Size(70, 30);
                 
                 NumericUpDown nudEditQuantity = new NumericUpDown();
                 nudEditQuantity.Minimum = 1;
                 nudEditQuantity.Maximum = 20;
                 nudEditQuantity.Value = selectedItem.Quantity;
-                nudEditQuantity.Location = new Point(100, 20);
-                nudEditQuantity.Size = new Size(60, 20);
+                nudEditQuantity.Location = new Point(150, 20);
+                nudEditQuantity.Size = new Size(70, 30);
                 
                 Label lblComment = new Label();
                 lblComment.Text = "Comment:";
-                lblComment.Location = new Point(20, 50);
-                lblComment.Size = new Size(70, 20);
+                lblComment.Location = new Point(20, 80);
+                lblComment.Size = new Size(70, 50);
                 
                 TextBox txtEditComment = new TextBox();
                 txtEditComment.Text = selectedItem.Comment;
-                txtEditComment.Location = new Point(100, 50);
+                txtEditComment.Location = new Point(150, 80);
                 txtEditComment.Size = new Size(170, 20);
                 
                 Button btnSave = new Button();
                 btnSave.Text = "Save";
                 btnSave.DialogResult = DialogResult.OK;
-                btnSave.Location = new Point(100, 90);
-                btnSave.Size = new Size(80, 30);
+                btnSave.Location = new Point(20, 150);
+                btnSave.Size = new Size(160, 60);
                 
                 Button btnCancel = new Button();
                 btnCancel.Text = "Cancel";
                 btnCancel.DialogResult = DialogResult.Cancel;
-                btnCancel.Location = new Point(190, 90);
-                btnCancel.Size = new Size(80, 30);
+                btnCancel.Location = new Point(200, 150);
+                btnCancel.Size = new Size(160, 60);
                 
                 editForm.Controls.Add(lblQuantity);
                 editForm.Controls.Add(nudEditQuantity);
@@ -368,24 +395,29 @@ namespace ChapeauG5
                     // Update the selected item's properties
                     selectedItem.Quantity = newQuantity;
                     selectedItem.Comment = newComment;
-                    
+
+
+                    // --- This part is currently not in use ---
+
                     // If it's an existing order with items already in the database
-                    if (isExistingOrder && selectedItem.OrderItemId != 0)
-                    {
-                        try
-                        {
-                            orderService.UpdateOrderItem(selectedItem.OrderItemId, newQuantity, newComment);
-                            MessageBox.Show("Order item updated successfully.", 
-                                "Item Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Error updating order item: {ex.Message}", 
-                                "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    
-                    RefreshOrderItemsView();
+                    //if (isExistingOrder && selectedItem.OrderItemId != 0)
+                    //{
+                    //    try
+                    //    {
+                    //        orderService.UpdateOrderItem(selectedItem.OrderItemId, newQuantity, newComment);
+                    //        MessageBox.Show("Order item updated successfully.", 
+                    //            "Item Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        MessageBox.Show($"Error updating order item: {ex.Message}", 
+                    //            "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    //    }
+                    //}
+
+                    // --- End of unused part ---
+
+                    ListNewOrders();
                 }
             }
         }
@@ -410,7 +442,7 @@ namespace ChapeauG5
         {
             try {
                 // Only ask for confirmation if there are unsaved changes
-                if (orderItems.Count > 0 && !isExistingOrder)
+                if (newOrderItems.Count > 0 && !isExistingOrder)
                 {
                     DialogResult result = MessageBox.Show(
                         "Are you sure you want to close this order view? All unsaved changes will be lost.",
@@ -440,18 +472,16 @@ namespace ChapeauG5
             this.Close();
         }
 
-        // Add this new method for the button click event
-
         private void btnMarkServed_Click(object sender, EventArgs e)
         {
-            if (lvOrderItems.SelectedItems.Count == 0)
+            if (orderedList.SelectedItems.Count == 0)
             {
                 MessageBox.Show("Please select an item to mark as served.", 
                     "No Item Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             
-            OrderItem selectedItem = (OrderItem)lvOrderItems.SelectedItems[0].Tag;
+            OrderItem selectedItem = (OrderItem)orderedList.SelectedItems[0].Tag;
             
             // Check if the item is already served
             if (selectedItem.Status == OrderItem.OrderStatus.Served)
@@ -478,7 +508,7 @@ namespace ChapeauG5
                 selectedItem.Status = OrderItem.OrderStatus.Served;
                 
                 // Refresh the display
-                RefreshOrderItemsView();
+                ListNewOrders();
                 
                 // Update Payment button state
                 UpdatePaymentButtonState();
@@ -493,12 +523,11 @@ namespace ChapeauG5
             }
         }
 
-        // Add this method to check if all items are served and update the Payment button state
         private void UpdatePaymentButtonState()
         {
             bool allServed = true;
             
-            foreach (OrderItem item in orderItems)
+            foreach (OrderItem item in newOrderItems)
             {
                 if (item.Status != OrderItem.OrderStatus.Served)
                 {
@@ -507,19 +536,87 @@ namespace ChapeauG5
                 }
             }
             
-            btnPayment.Enabled = allServed && orderItems.Count > 0;
+            btnPayment.Enabled = allServed && newOrderItems.Count > 0;
             
             // Set tooltip or label to indicate why payment might be disabled
-            if (!allServed && orderItems.Count > 0)
+            if (!allServed && newOrderItems.Count > 0)
             {
                 btnPayment.Text = "Serve items first";
                 btnPayment.BackColor = Color.Gray;
             }
-            else if (orderItems.Count > 0)
+            else if (newOrderItems.Count > 0)
             {
                 btnPayment.Text = "Payment";
                 btnPayment.BackColor = Color.LightBlue;
             }
         }
+
+        // --- This part is currently not in use ---
+
+        //private void RefreshOrderItemsView()
+        //{
+        //    try
+        //    {
+        //        // Ensure ListView is initialized
+        //        if (lvOrderItems == null)
+        //        {
+        //            Console.WriteLine("ListView not initialized");
+        //            return;
+        //        }
+
+        //        lvOrderItems.Items.Clear();
+        //        decimal orderTotal = 0;
+
+        //        foreach (OrderItem item in orderItems)
+        //        {
+        //            // Create a safer way to access these properties
+        //            string itemName = GetItemName(item);
+        //            string quantity = item.Quantity.ToString();
+        //            string status = GetItemStatus(item);
+        //            //string comment = item.Comment ?? string.Empty;
+
+        //            ListViewItem lvi = new ListViewItem(itemName);
+        //            lvi.SubItems.Add(quantity);
+        //            lvi.SubItems.Add(status);
+        //            //lvi.SubItems.Add(item.Comment ?? string.Empty); // Optional
+
+        //            lvi.Tag = item;
+        //            lvOrderItems.Items.Add(lvi);
+
+        //        }
+
+        //        // Update the order total
+        //        if (lblOrderTotal != null)
+        //        {
+        //            lblOrderTotal.Text = $"Order Total: €{orderTotal:0.00}";
+        //            lblOrderTotal.Visible = true;
+        //        }
+
+        //        // Enable/disable buttons based on whether we have items
+        //        btnRemoveItem.Enabled = orderItems.Count > 0;
+        //        btnEditItem.Enabled = orderItems.Count > 0;
+        //        btnSaveOrder.Enabled = orderItems.Count > 0;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error in RefreshOrderItemsView: {ex.Message}");
+        //        MessageBox.Show($"Error refreshing order items: {ex.Message}", 
+        //            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //    }
+
+        //    // Enable/disable Mark as Served button if we have items
+        //    btnMarkServed.Enabled = orderItems.Count > 0 && isExistingOrder;
+
+        //    // Update payment button state
+        //    UpdatePaymentButtonState();
+        //}
+
+        // --- End of unused part ---
+
+
+
+
+
+        // Add this method to save the entire order at once
     }
 }

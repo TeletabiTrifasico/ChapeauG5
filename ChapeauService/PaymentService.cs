@@ -24,7 +24,7 @@ namespace ChapeauService
             return orderDao.GetOrderWithItemsById(orderId);
         }
 
-        // Calculate VAT amounts for an order - corrected for prices that already include VAT
+        // Calculate VAT amounts for an order
         public (decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) CalculateOrderTotals(List<OrderItem> orderItems)
         {
             decimal totalExVat = 0;
@@ -52,7 +52,7 @@ namespace ChapeauService
                 }
                 else
                 {
-                    // Low VAT rate (9%)
+                    // Low VAT rate (9%) same formula
                     itemVat = itemTotal - (itemTotal / 1.09m);
                     lowVatAmount += itemVat;
                 }
@@ -91,12 +91,12 @@ namespace ChapeauService
                                 decimal amount, string feedback, FeedbackType feedbackType,
                                 bool markOrderAsDone = true)
         {
-            // Get the full invoice object from the database instead of creating a new one
+            // Get the full invoice object from the database
             Invoice invoice = invoiceDao.GetInvoiceById(invoiceId);
             
             Payment payment = new Payment
             {
-                InvoiceId = invoice, // Use the full invoice object with tip amount
+                InvoiceId = invoice,
                 PaymentMethod = paymentMethod,
                 Amount = amount,
                 Feedback = feedback,
