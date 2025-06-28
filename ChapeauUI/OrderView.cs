@@ -206,7 +206,7 @@ namespace ChapeauG5
                     lvi.SubItems.Add($"€{GetItemPrice(item):0.00}"); // Price
                     lvi.SubItems.Add($"€{(int.Parse(quantity) * GetItemPrice(item)):0.00}"); // Total Price
                     lvi.SubItems.Add(status);
-                    lvi.SubItems.Add(item.Comment ?? string.Empty);
+                    lvi.SubItems.Add(item.Comment ?? string.Empty);
 
                     lvi.Tag = item;
                     orderedList.Items.Add(lvi);

@@ -34,9 +34,9 @@ namespace ChapeauG5
         {
             this.components = new System.ComponentModel.Container();
             
-            // Form settings
+            // Form settings - increase height
             this.Text = "Process Payment";
-            this.Size = new Size(800, 840); // Increased height
+            this.Size = new Size(800, 890); // Increased from 840 to 890
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -171,58 +171,95 @@ namespace ChapeauG5
             totalsPanel.Controls.Add(lblFinalAmount);
             totalsPanel.Controls.Add(this.lblFinalAmountValue);
             
-            // Payment Method Section 
+            // Split amount label - move this up to make room
+            this.lblSplitAmount = new Label();
+            this.lblSplitAmount.Location = new Point(400, 530);
+            this.lblSplitAmount.Size = new Size(350, 25);
+            this.lblSplitAmount.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblSplitAmount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            this.lblSplitAmount.Text = "Each person pays: €0.00";
+            this.lblSplitAmount.Visible = false;
+            
+            // Custom Split checkbox - move to next line
+            this.chkCustomSplit = new CheckBox();
+            this.chkCustomSplit.Location = new Point(170, 560); // Moved down
+            this.chkCustomSplit.Size = new Size(120, 25);
+            this.chkCustomSplit.Text = "Custom Split";
+            this.chkCustomSplit.Visible = false;
+            this.chkCustomSplit.CheckedChanged += new EventHandler(this.chkCustomSplit_CheckedChanged);
+            
+            // Configure Custom Split button - move to next line
+            this.btnConfigureCustomSplit = new Button();
+            this.btnConfigureCustomSplit.Location = new Point(300, 560); // Moved down and right
+            this.btnConfigureCustomSplit.Size = new Size(130, 25);
+            this.btnConfigureCustomSplit.Text = "Configure Amounts";
+            this.btnConfigureCustomSplit.BackColor = Color.LightBlue;
+            this.btnConfigureCustomSplit.Font = new Font("Segoe UI", 9);
+            this.btnConfigureCustomSplit.Visible = false;
+            this.btnConfigureCustomSplit.Click += new EventHandler(this.btnConfigureCustomSplit_Click);
+            
+            // Custom split status label - move to next line
+            this.lblCustomSplitStatus = new Label();
+            this.lblCustomSplitStatus.Location = new Point(170, 590); // Moved down
+            this.lblCustomSplitStatus.Size = new Size(350, 25);
+            this.lblCustomSplitStatus.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblCustomSplitStatus.Font = new Font("Segoe UI", 9, FontStyle.Italic);
+            this.lblCustomSplitStatus.ForeColor = Color.DarkBlue;
+            this.lblCustomSplitStatus.Text = "Custom amounts not configured";
+            this.lblCustomSplitStatus.Visible = false;
+            
+            // Payment Method Section - move down to make room
             Label lblPaymentMethod = new Label();
-            lblPaymentMethod.Location = new Point(20, 570);
+            lblPaymentMethod.Location = new Point(20, 620); // Moved down from 570
             lblPaymentMethod.Size = new Size(150, 25);
             lblPaymentMethod.Text = "Payment Method:";
             lblPaymentMethod.TextAlign = ContentAlignment.MiddleLeft;
             lblPaymentMethod.Font = new Font("Segoe UI", 10);
             
             this.cmbPaymentMethod = new ComboBox();
-            this.cmbPaymentMethod.Location = new Point(170, 570);
+            this.cmbPaymentMethod.Location = new Point(170, 620); // Moved down from 570
             this.cmbPaymentMethod.Size = new Size(200, 25);
             this.cmbPaymentMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             
-            // Feedback Section (adjusted position)
+            // Feedback Section - move down accordingly
             Label lblFeedbackType = new Label();
-            lblFeedbackType.Location = new Point(20, 610);
+            lblFeedbackType.Location = new Point(20, 660); // Moved down from 610
             lblFeedbackType.Size = new Size(150, 25);
             lblFeedbackType.Text = "Feedback Type:";
             lblFeedbackType.TextAlign = ContentAlignment.MiddleLeft;
             lblFeedbackType.Font = new Font("Segoe UI", 10);
             
             this.cmbFeedbackType = new ComboBox();
-            this.cmbFeedbackType.Location = new Point(170, 610);
+            this.cmbFeedbackType.Location = new Point(170, 660); // Moved down from 610
             this.cmbFeedbackType.Size = new Size(200, 25);
             this.cmbFeedbackType.DropDownStyle = ComboBoxStyle.DropDownList;
             this.cmbFeedbackType.SelectedIndexChanged += new EventHandler(this.cmbFeedbackType_SelectedIndexChanged);
             
             Label lblFeedback = new Label();
-            lblFeedback.Location = new Point(20, 650);
+            lblFeedback.Location = new Point(20, 700); // Moved down from 650
             lblFeedback.Size = new Size(150, 25);
             lblFeedback.Text = "Feedback:";
             lblFeedback.TextAlign = ContentAlignment.MiddleLeft;
             lblFeedback.Font = new Font("Segoe UI", 10);
             
             this.txtFeedback = new TextBox();
-            this.txtFeedback.Location = new Point(170, 650);
+            this.txtFeedback.Location = new Point(170, 700); // Moved down from 650
             this.txtFeedback.Size = new Size(610, 80);
             this.txtFeedback.Multiline = true;
             this.txtFeedback.Enabled = false;
             
-            // Process Payment Button
+            // Process Payment Button - move down
             this.btnProcessPayment = new Button();
-            this.btnProcessPayment.Location = new Point(450, 740);
+            this.btnProcessPayment.Location = new Point(450, 790); // Moved down from 740
             this.btnProcessPayment.Size = new Size(160, 50);
             this.btnProcessPayment.Text = "Process Payment";
             this.btnProcessPayment.BackColor = Color.LightGreen;
             this.btnProcessPayment.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             this.btnProcessPayment.Click += new EventHandler(this.btnProcessPayment_Click);
             
-            // Cancel Button
+            // Cancel Button - move down
             this.btnCancel = new Button();
-            this.btnCancel.Location = new Point(620, 740);
+            this.btnCancel.Location = new Point(620, 790); // Moved down from 740
             this.btnCancel.Size = new Size(160, 50);
             this.btnCancel.Text = "Cancel";
             this.btnCancel.BackColor = Color.LightCoral;
@@ -270,12 +307,43 @@ namespace ChapeauG5
             this.lblSplitAmount.Text = "Each person pays: €0.00";
             this.lblSplitAmount.Visible = false;
             
+            // Custom Split checkbox
+            this.chkCustomSplit = new CheckBox();
+            this.chkCustomSplit.Location = new Point(170, 560); // Moved down
+            this.chkCustomSplit.Size = new Size(120, 25);
+            this.chkCustomSplit.Text = "Custom Split";
+            this.chkCustomSplit.Visible = false;
+            this.chkCustomSplit.CheckedChanged += new EventHandler(this.chkCustomSplit_CheckedChanged);
+            
+            // Configure Custom Split button
+            this.btnConfigureCustomSplit = new Button();
+            this.btnConfigureCustomSplit.Location = new Point(300, 560); // Moved down and right
+            this.btnConfigureCustomSplit.Size = new Size(130, 25);
+            this.btnConfigureCustomSplit.Text = "Configure Amounts";
+            this.btnConfigureCustomSplit.BackColor = Color.LightBlue;
+            this.btnConfigureCustomSplit.Font = new Font("Segoe UI", 9);
+            this.btnConfigureCustomSplit.Visible = false;
+            this.btnConfigureCustomSplit.Click += new EventHandler(this.btnConfigureCustomSplit_Click);
+            
+            // Custom split status label
+            this.lblCustomSplitStatus = new Label();
+            this.lblCustomSplitStatus.Location = new Point(170, 590); // Moved down
+            this.lblCustomSplitStatus.Size = new Size(350, 25);
+            this.lblCustomSplitStatus.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblCustomSplitStatus.Font = new Font("Segoe UI", 9, FontStyle.Italic);
+            this.lblCustomSplitStatus.ForeColor = Color.DarkBlue;
+            this.lblCustomSplitStatus.Text = "Custom amounts not configured";
+            this.lblCustomSplitStatus.Visible = false;
+            
             // Add new controls to the form
             this.Controls.Add(lblSplitBill);
             this.Controls.Add(this.chkSplitBill);
             this.Controls.Add(this.lblNumberOfSplits);
             this.Controls.Add(this.nudNumberOfSplits);
             this.Controls.Add(this.lblSplitAmount);
+            this.Controls.Add(this.chkCustomSplit);
+            this.Controls.Add(this.btnConfigureCustomSplit);
+            this.Controls.Add(this.lblCustomSplitStatus);
             
             // Add controls to form
             this.Controls.Add(this.lblHeader);
@@ -313,5 +381,8 @@ namespace ChapeauG5
         private NumericUpDown nudNumberOfSplits;
         private Label lblSplitAmount;
         private Label lblNumberOfSplits;
+        private CheckBox chkCustomSplit;
+        private Button btnConfigureCustomSplit;
+        private Label lblCustomSplitStatus;
     }
 }

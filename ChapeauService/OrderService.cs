@@ -85,10 +85,14 @@ namespace ChapeauService
             return orderDao.GetTableOrderStatuses();
         }
 
-        // Add this new method
         public void MarkOrderItemAsServed(int orderItemId)
         {
             orderDao.MarkOrderItemAsServed(orderItemId);
+        }
+
+        public Order GetOrderWithItemsById(int orderId)
+        {
+            return orderDao.GetOrderWithItemsById(orderId);
         }
     }
 }

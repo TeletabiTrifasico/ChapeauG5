@@ -176,8 +176,10 @@ namespace ChapeauG5
 
         private void btnLogout_Click(object sender, EventArgs e)
         {
-            this.Close();
-            Application.Restart();
+            var loginForm = new LoginForm();
+            loginForm.ClearCredentials();
+            loginForm.Show();
+            this.Hide();
         }
 
         private void btnMenuView_Click(object sender, EventArgs e)
