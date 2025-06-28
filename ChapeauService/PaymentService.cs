@@ -18,12 +18,6 @@ namespace ChapeauService
             orderDao = new OrderDao();
         }
 
-        // Get order with all items for payment
-        public Order GetOrderForPayment(int orderId)
-        {
-            return orderDao.GetOrderWithItemsById(orderId);
-        }
-
         // Calculate VAT amounts for an order
         public (decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) CalculateOrderTotals(List<OrderItem> orderItems)
         {

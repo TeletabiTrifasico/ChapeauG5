@@ -16,6 +16,7 @@ namespace ChapeauG5
         private readonly int orderId;
         private readonly Employee loggedInEmployee;
         private readonly PaymentService paymentService;
+        private readonly OrderService orderService; // Add OrderService
         
         // Main payment object that contains all payment-related data
         private Payment currentPayment;
@@ -31,6 +32,7 @@ namespace ChapeauG5
             this.orderId = orderId;
             this.loggedInEmployee = employee;
             this.paymentService = new PaymentService();
+            this.orderService = new OrderService(); // Initialize OrderService
             
             // Initialize the main payment object
             this.currentPayment = new Payment();
@@ -41,8 +43,8 @@ namespace ChapeauG5
         {
             try
             {                
-                // Load the order with all items
-                currentOrder = paymentService.GetOrderForPayment(orderId);
+                // Load the order with all items using OrderService instead of PaymentService
+                currentOrder = orderService.GetOrderWithItemsById(orderId);
                 
                 if (currentOrder == null)
                 {
