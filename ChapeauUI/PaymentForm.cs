@@ -16,14 +16,13 @@ namespace ChapeauG5
         private readonly int orderId;
         private readonly Employee loggedInEmployee;
         private readonly PaymentService paymentService;
-        private readonly OrderService orderService; // Add OrderService
+        private readonly OrderService orderService;
         
-        // Main payment object that contains all payment-related data
-        private Payment currentPayment;
+        // Main invoice object that contains all payment-related data including payments list
+        private Invoice currentInvoice;
         private Order currentOrder;
         
-        // Split payment tracking
-        private List<Payment> splitPayments;
+        // Split payment tracking - now using the invoice's payment collection
         private int currentSplitIndex = 0;
 
         public PaymentForm(int orderId, Employee employee)
@@ -32,18 +31,17 @@ namespace ChapeauG5
             this.orderId = orderId;
             this.loggedInEmployee = employee;
             this.paymentService = new PaymentService();
-            this.orderService = new OrderService(); // Initialize OrderService
+            this.orderService = new OrderService();
             
-            // Initialize the main payment object
-            this.currentPayment = new Payment();
-            this.splitPayments = new List<Payment>();
+            // Initialize the main invoice object with empty payments list
+            this.currentInvoice = new Invoice();
         }
 
         private void PaymentForm_Load(object sender, EventArgs e)
         {
             try
             {                
-                // Load the order with all items using OrderService instead of PaymentService
+                // Load the order with all items using OrderService
                 currentOrder = orderService.GetOrderWithItemsById(orderId);
                 
                 if (currentOrder == null)
@@ -67,8 +65,8 @@ namespace ChapeauG5
                 // Set the table number in the header
                 lblHeader.Text = $"Payment for Table {currentOrder.TableId.TableNumber}";
                 
-                // Initialize payment with order totals
-                InitializePaymentData();
+                // Initialize invoice with order totals
+                InitializeInvoiceData();
                 
                 // Load order items
                 LoadOrderItems();
@@ -88,26 +86,20 @@ namespace ChapeauG5
             }
         }
 
-        private void InitializePaymentData()
+        private void InitializeInvoiceData()
         {
-            // Calculate order totals and store in the payment's invoice
+            // Calculate order totals and store in the invoice
             var totals = paymentService.CalculateOrderTotals(currentOrder.OrderItems);
             
-            // Create invoice object with calculated totals
-            currentPayment.InvoiceId = new Invoice
-            {
-                OrderId = currentOrder,
-                TotalAmount = totals.totalWithVat,
-                TotalVat = totals.lowVat + totals.highVat,
-                LowVatAmount = totals.lowVat,
-                HighVatAmount = totals.highVat,
-                TotalExcludingVat = totals.totalExVat,
-                TotalTipAmount = 0, // Will be updated when tip is entered
-                CreatedAt = DateTime.Now
-            };
-            
-            // Set initial payment amount (will be updated with tip)
-            currentPayment.Amount = totals.totalWithVat;
+            // Set invoice properties with calculated totals
+            currentInvoice.OrderId = currentOrder;
+            currentInvoice.TotalAmount = totals.totalWithVat;
+            currentInvoice.TotalVat = totals.lowVat + totals.highVat;
+            currentInvoice.LowVatAmount = totals.lowVat;
+            currentInvoice.HighVatAmount = totals.highVat;
+            currentInvoice.TotalExcludingVat = totals.totalExVat;
+            currentInvoice.TotalTipAmount = 0; // Will be updated when tip is entered
+            currentInvoice.CreatedAt = DateTime.Now;
         }
 
         private void LoadOrderItems()
@@ -133,13 +125,11 @@ namespace ChapeauG5
 
         private void UpdateTotalsDisplay()
         {
-            var invoice = currentPayment.InvoiceId;
-            
-            // Update display labels
-            lblSubtotalValue.Text = $"€{invoice.TotalExcludingVat:0.00}";
-            lblLowVatValue.Text = $"€{invoice.LowVatAmount:0.00}";
-            lblHighVatValue.Text = $"€{invoice.HighVatAmount:0.00}";
-            lblTotalValue.Text = $"€{invoice.TotalAmount:0.00}";
+            // Update display labels using invoice data
+            lblSubtotalValue.Text = $"€{currentInvoice.TotalExcludingVat:0.00}";
+            lblLowVatValue.Text = $"€{currentInvoice.LowVatAmount:0.00}";
+            lblHighVatValue.Text = $"€{currentInvoice.HighVatAmount:0.00}";
+            lblTotalValue.Text = $"€{currentInvoice.TotalAmount:0.00}";
             
             // Calculate and display final amount with tip
             UpdateFinalAmount();
@@ -150,18 +140,23 @@ namespace ChapeauG5
             // Get tip amount from input
             if (decimal.TryParse(txtTip.Text, out decimal tip))
             {
-                currentPayment.InvoiceId.TotalTipAmount = tip;
+                currentInvoice.TotalTipAmount = tip;
             }
             else
             {
-                currentPayment.InvoiceId.TotalTipAmount = 0;
+                currentInvoice.TotalTipAmount = 0;
             }
             
-            // Update payment amount (total + tip)
-            currentPayment.Amount = currentPayment.InvoiceId.TotalAmount + currentPayment.InvoiceId.TotalTipAmount;
+            // Calculate total amount including tip
+            decimal finalAmount = currentInvoice.TotalAmount + currentInvoice.TotalTipAmount;
             
             // Update display
-            lblFinalAmountValue.Text = $"€{currentPayment.Amount:0.00}";
+            lblFinalAmountValue.Text = $"€{finalAmount:0.00}";
+        }
+
+        private decimal GetFinalAmount()
+        {
+            return currentInvoice.TotalAmount + currentInvoice.TotalTipAmount;
         }
 
         private void SetupPaymentMethodComboBox()
@@ -218,25 +213,27 @@ namespace ChapeauG5
 
         private void ReinitializeCustomSplitAmounts()
         {
-            // Clear existing split payments and reinitialize with even amounts
-            splitPayments.Clear();
-            decimal evenSplit = decimal.Round(currentPayment.Amount / GetNumberOfSplits(), 2);
+            // Clear existing payments in the invoice and reinitialize with even amounts
+            currentInvoice.Payments.Clear();
+            decimal finalAmount = GetFinalAmount();
+            decimal evenSplit = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
             
             for (int i = 0; i < GetNumberOfSplits(); i++)
             {
-                splitPayments.Add(new Payment
+                Payment splitPayment = new Payment
                 {
                     Amount = evenSplit,
-                    InvoiceId = currentPayment.InvoiceId
-                });
+                    InvoiceId = currentInvoice
+                };
+                currentInvoice.Payments.Add(splitPayment);
             }
             
             // Adjust last amount to account for rounding
-            if (splitPayments.Count > 0)
+            if (currentInvoice.Payments.Count > 0)
             {
-                decimal totalCustom = splitPayments.Sum(p => p.Amount);
-                decimal difference = currentPayment.Amount - totalCustom;
-                splitPayments[splitPayments.Count - 1].Amount += difference;
+                decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
+                decimal difference = finalAmount - totalCustom;
+                currentInvoice.Payments[currentInvoice.Payments.Count - 1].Amount += difference;
             }
             
             UpdateCustomSplitDisplay();
@@ -272,7 +269,7 @@ namespace ChapeauG5
                 btnConfigureCustomSplit.Visible = false;
                 lblCustomSplitStatus.Visible = false;
                 lblSplitAmount.Visible = false;
-                splitPayments.Clear();
+                currentInvoice.Payments.Clear();
             }
         }
 
@@ -297,7 +294,8 @@ namespace ChapeauG5
             }
             else
             {
-                decimal splitAmount = decimal.Round(currentPayment.Amount / GetNumberOfSplits(), 2);
+                decimal finalAmount = GetFinalAmount();
+                decimal splitAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
                 lblSplitAmount.Text = $"Each person pays: €{splitAmount:0.00}";
                 lblSplitAmount.Visible = true;
             }
@@ -307,14 +305,6 @@ namespace ChapeauG5
         {
             try
             {
-                // Set payment method and feedback from form
-                dynamic selectedPaymentMethod = cmbPaymentMethod.SelectedItem;
-                currentPayment.PaymentMethod = (PaymentMethod)selectedPaymentMethod.Value;
-                
-                dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
-                currentPayment.FeedbackType = (FeedbackType)selectedFeedbackType.Value;
-                currentPayment.Feedback = txtFeedback.Text;
-
                 if (IsSplittingBill())
                 {
                     ProcessSplitPayment();
@@ -333,32 +323,58 @@ namespace ChapeauG5
 
         private void ProcessSinglePayment()
         {
+            // Get payment details from form
+            dynamic selectedPaymentMethod = cmbPaymentMethod.SelectedItem;
+            PaymentMethod paymentMethod = (PaymentMethod)selectedPaymentMethod.Value;
+            
+            dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
+            FeedbackType feedbackType = (FeedbackType)selectedFeedbackType.Value;
+            string feedback = txtFeedback.Text;
+            
+            decimal finalAmount = GetFinalAmount();
+            
             // Confirm payment
             DialogResult result = MessageBox.Show(
-                $"Process payment of {lblFinalAmountValue.Text} using {currentPayment.PaymentMethod}?",
+                $"Process payment of €{finalAmount:0.00} using {paymentMethod}?",
+
                 "Confirm Payment",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
             
             if (result == DialogResult.Yes)
             {
-                // Create invoice
+                // Create the payment and add it to the invoice
+                Payment payment = new Payment
+                {
+                    PaymentMethod = paymentMethod,
+                    Amount = finalAmount,
+                    Feedback = feedback,
+                    FeedbackType = feedbackType
+                };
+                
+                currentInvoice.AddPayment(payment);
+                
+                // Create invoice in database
                 int invoiceId = paymentService.CreateInvoice(
                     orderId, 
-                    currentPayment.InvoiceId.TotalAmount, 
-                    currentPayment.InvoiceId.TotalVat, 
-                    currentPayment.InvoiceId.LowVatAmount, 
-                    currentPayment.InvoiceId.HighVatAmount, 
-                    currentPayment.InvoiceId.TotalExcludingVat, 
-                    currentPayment.InvoiceId.TotalTipAmount);
+                    currentInvoice.TotalAmount, 
+                    currentInvoice.TotalVat, 
+                    currentInvoice.LowVatAmount, 
+                    currentInvoice.HighVatAmount, 
+                    currentInvoice.TotalExcludingVat, 
+                    currentInvoice.TotalTipAmount);
                 
-                // Process payment
+                // Update the invoice ID
+                currentInvoice.InvoiceId = invoiceId;
+                payment.InvoiceId = currentInvoice;
+                
+                // Process the payment
                 int paymentId = paymentService.ProcessPayment(
                     invoiceId, 
-                    currentPayment.PaymentMethod, 
-                    currentPayment.Amount, 
-                    currentPayment.Feedback, 
-                    currentPayment.FeedbackType);
+                    payment.PaymentMethod, 
+                    payment.Amount, 
+                    payment.Feedback, 
+                    payment.FeedbackType);
                 
                 MessageBox.Show(
                     "Payment processed successfully!",
@@ -376,7 +392,7 @@ namespace ChapeauG5
             // Validate custom split amounts if using custom split
             if (IsCustomSplit())
             {
-                if (splitPayments.Count != GetNumberOfSplits())
+                if (currentInvoice.Payments.Count != GetNumberOfSplits())
                 {
                     MessageBox.Show(
                         "Please configure the custom split amounts before proceeding.",
@@ -386,11 +402,12 @@ namespace ChapeauG5
                     return;
                 }
                 
-                decimal totalCustom = splitPayments.Sum(p => p.Amount);
-                if (Math.Abs(totalCustom - currentPayment.Amount) >= 0.01m)
+                decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
+                decimal finalAmount = GetFinalAmount();
+                if (Math.Abs(totalCustom - finalAmount) >= 0.01m)
                 {
                     MessageBox.Show(
-                        $"The sum of custom amounts (€{totalCustom:0.00}) does not match the total bill (€{currentPayment.Amount:0.00}).\n\nPlease reconfigure the amounts.",
+                        $"The sum of custom amounts (€{totalCustom:0.00}) does not match the total bill (€{finalAmount:0.00}).\n\nPlease reconfigure the amounts.",
                         "Amount Mismatch",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
@@ -398,15 +415,18 @@ namespace ChapeauG5
                 }
             }
             
-            // Create invoice
+            // Create invoice in database first
             int invoiceId = paymentService.CreateInvoice(
                 orderId, 
-                currentPayment.InvoiceId.TotalAmount, 
-                currentPayment.InvoiceId.TotalVat, 
-                currentPayment.InvoiceId.LowVatAmount, 
-                currentPayment.InvoiceId.HighVatAmount, 
-                currentPayment.InvoiceId.TotalExcludingVat, 
-                currentPayment.InvoiceId.TotalTipAmount);
+                currentInvoice.TotalAmount, 
+                currentInvoice.TotalVat, 
+                currentInvoice.LowVatAmount, 
+                currentInvoice.HighVatAmount, 
+                currentInvoice.TotalExcludingVat, 
+                currentInvoice.TotalTipAmount);
+            
+            // Update the invoice ID
+            currentInvoice.InvoiceId = invoiceId;
             
             // Reset split tracking
             currentSplitIndex = 0;
@@ -433,8 +453,9 @@ namespace ChapeauG5
             }
             
             // Calculate split amounts
-            decimal splitAmount = decimal.Round(currentPayment.Amount / GetNumberOfSplits(), 2);
-            decimal lastSplitAmount = currentPayment.Amount - (splitAmount * (GetNumberOfSplits() - 1));
+            decimal finalAmount = GetFinalAmount();
+            decimal splitAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
+            decimal lastSplitAmount = finalAmount - (splitAmount * (GetNumberOfSplits() - 1));
             decimal amountToPay = (currentSplitIndex == GetNumberOfSplits()) ? lastSplitAmount : splitAmount;
 
             ShowSplitPaymentDialog(invoiceId, amountToPay, () => ProcessNextEqualSplitPayment(invoiceId));
@@ -450,7 +471,7 @@ namespace ChapeauG5
                 return;
             }
             
-            decimal amountToPay = splitPayments[currentSplitIndex - 1].Amount;
+            decimal amountToPay = currentInvoice.Payments[currentSplitIndex - 1].Amount;
             ShowSplitPaymentDialog(invoiceId, amountToPay, () => ProcessNextCustomSplitPayment(invoiceId));
         }
 
@@ -497,23 +518,27 @@ namespace ChapeauG5
                         splitFeedbackType,
                         isLastPayment); // Mark order as done only on last payment
                     
-                    // Create a payment record for tracking
+                    // Update the payment in the invoice's payment collection
                     Payment splitPayment = new Payment
                     {
+                        PaymentId = paymentId,
                         PaymentMethod = paymentMethod,
                         Amount = amountToPay,
                         Feedback = splitFeedback,
-                        FeedbackType = splitFeedbackType
+                        FeedbackType = splitFeedbackType,
+                        InvoiceId = currentInvoice
                     };
                     
-                    // Add to tracking list (reuse splitPayments for tracking completed payments)
-                    if (splitPayments.Count < currentSplitIndex)
+                    // Update the payment in the collection
+                    if (IsCustomSplit() && currentSplitIndex <= currentInvoice.Payments.Count)
                     {
-                        splitPayments.Add(splitPayment);
+                        // Update existing payment in custom split
+                        currentInvoice.Payments[currentSplitIndex - 1] = splitPayment;
                     }
                     else
                     {
-                        splitPayments[currentSplitIndex - 1] = splitPayment;
+                        // Add new payment for equal split
+                        currentInvoice.AddPayment(splitPayment);
                     }
                     
                     // Process the next split
@@ -645,21 +670,26 @@ namespace ChapeauG5
 
         private void FinalizeSplitPayment()
         {
-            // Show a summary of the payments
+            // Show a summary of the payments using the invoice's payment collection
             StringBuilder summary = new StringBuilder();
             summary.AppendLine("Split Bill Payment Summary:");
             summary.AppendLine("---------------------------");
             
-            for (int i = 0; i < splitPayments.Count; i++)
+            for (int i = 0; i < currentInvoice.Payments.Count; i++)
             {
-                summary.AppendLine($"Payment {i+1}: {splitPayments[i].PaymentMethod} - €{splitPayments[i].Amount:0.00}");
+                var payment = currentInvoice.Payments[i];
+                summary.AppendLine($"Payment {i+1}: {payment.PaymentMethod} - €{payment.Amount:0.00}");
                 
                 // Add feedback information
-                if (splitPayments[i].FeedbackType != FeedbackType.None && !string.IsNullOrEmpty(splitPayments[i].Feedback))
+                if (payment.FeedbackType != FeedbackType.None && !string.IsNullOrEmpty(payment.Feedback))
                 {
-                    summary.AppendLine($"  Feedback ({splitPayments[i].FeedbackType}): {splitPayments[i].Feedback}");
+                    summary.AppendLine($"  Feedback ({payment.FeedbackType}): {payment.Feedback}");
                 }
             }
+            
+            summary.AppendLine($"\nTotal Paid: €{currentInvoice.GetTotalPaidAmount():0.00}");
+            summary.AppendLine($"Invoice Total: €{GetFinalAmount():0.00}");
+            summary.AppendLine($"Status: {(currentInvoice.IsFullyPaid() ? "FULLY PAID" : "PARTIALLY PAID")}");
             
             MessageBox.Show(summary.ToString(), "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.DialogResult = DialogResult.OK;
@@ -686,7 +716,7 @@ namespace ChapeauG5
             }
             else
             {
-                splitPayments.Clear();
+                currentInvoice.Payments.Clear();
                 UpdateSplitAmount(); // Show equal split display
             }
         }
@@ -698,18 +728,19 @@ namespace ChapeauG5
 
         private void UpdateCustomSplitDisplay()
         {
-            if (splitPayments.Count > 0)
+            if (currentInvoice.Payments.Count > 0)
             {
-                decimal totalCustom = splitPayments.Sum(p => p.Amount);
+                decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
+                decimal finalAmount = GetFinalAmount();
                 
-                if (Math.Abs(totalCustom - currentPayment.Amount) < 0.01m) // Account for rounding differences
+                if (Math.Abs(totalCustom - finalAmount) < 0.01m) // Account for rounding differences
                 {
                     lblCustomSplitStatus.Text = $"Custom amounts configured (Total: €{totalCustom:0.00})";
                     lblCustomSplitStatus.ForeColor = Color.DarkGreen;
                 }
                 else
                 {
-                    lblCustomSplitStatus.Text = $"Custom amounts mismatch! Expected: €{currentPayment.Amount:0.00}, Current: €{totalCustom:0.00}";
+                    lblCustomSplitStatus.Text = $"Custom amounts mismatch! Expected: €{finalAmount:0.00}, Current: €{totalCustom:0.00}";
                     lblCustomSplitStatus.ForeColor = Color.Red;
                 }
             }
@@ -731,9 +762,11 @@ namespace ChapeauG5
                 customSplitDialog.MaximizeBox = false;
                 customSplitDialog.MinimizeBox = false;
                 
+                decimal finalAmount = GetFinalAmount();
+                
                 // Header label
                 Label lblHeader = new Label();
-                lblHeader.Text = $"Total Amount to Split: €{currentPayment.Amount:0.00}";
+                lblHeader.Text = $"Total Amount to Split: €{finalAmount:0.00}";
                 lblHeader.Location = new Point(20, 20);
                 lblHeader.Size = new Size(450, 25);
                 lblHeader.Font = new Font("Segoe UI", 11, FontStyle.Bold);
@@ -755,7 +788,7 @@ namespace ChapeauG5
                     txtAmount.Location = new Point(110, yPosition);
                     txtAmount.Size = new Size(100, 25);
                     txtAmount.TextAlign = HorizontalAlignment.Right;
-                    txtAmount.Text = splitPayments.Count > i ? splitPayments[i].Amount.ToString("0.00") : "0.00";
+                    txtAmount.Text = currentInvoice.Payments.Count > i ? currentInvoice.Payments[i].Amount.ToString("0.00") : "0.00";
                     
                     Label lblEuro = new Label();
                     lblEuro.Text = "€";
@@ -791,7 +824,7 @@ namespace ChapeauG5
                     }
                     lblTotal.Text = $"Total of amounts above: €{total:0.00}";
                     
-                    if (Math.Abs(total - currentPayment.Amount) < 0.01m)
+                    if (Math.Abs(total - finalAmount) < 0.01m)
                     {
                         lblTotal.ForeColor = Color.DarkGreen;
                     }
@@ -830,7 +863,7 @@ namespace ChapeauG5
                 btnEqualSplit.BackColor = Color.LightBlue;
                 btnEqualSplit.Click += (s, e) =>
                 {
-                    decimal evenAmount = decimal.Round(currentPayment.Amount / GetNumberOfSplits(), 2);
+                    decimal evenAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
                     for (int i = 0; i < amountTextBoxes.Count; i++)
                     {
                         amountTextBoxes[i].Text = evenAmount.ToString("0.00");
@@ -839,7 +872,7 @@ namespace ChapeauG5
                     if (amountTextBoxes.Count > 0)
                     {
                         decimal totalEven = evenAmount * GetNumberOfSplits();
-                        decimal difference = currentPayment.Amount - totalEven;
+                        decimal difference = finalAmount - totalEven;
                         decimal lastAmount = evenAmount + difference;
                         amountTextBoxes[amountTextBoxes.Count - 1].Text = lastAmount.ToString("0.00");
                     }
@@ -857,8 +890,8 @@ namespace ChapeauG5
                 
                 if (customSplitDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Save the custom amounts
-                    splitPayments.Clear();
+                    // Save the custom amounts to the invoice's payment collection
+                    currentInvoice.Payments.Clear();
                     decimal totalEntered = 0;
                     
                     foreach (TextBox tb in amountTextBoxes)
@@ -869,18 +902,19 @@ namespace ChapeauG5
                             totalEntered += amount;
                         }
                         
-                        splitPayments.Add(new Payment
+                        Payment splitPayment = new Payment
                         {
                             Amount = amount,
-                            InvoiceId = currentPayment.InvoiceId
-                        });
+                            InvoiceId = currentInvoice
+                        };
+                        currentInvoice.AddPayment(splitPayment);
                     }
                     
                     // Validate total
-                    if (Math.Abs(totalEntered - currentPayment.Amount) >= 0.01m)
+                    if (Math.Abs(totalEntered - finalAmount) >= 0.01m)
                     {
                         MessageBox.Show(
-                            $"The sum of individual amounts (€{totalEntered:0.00}) does not match the total bill amount (€{currentPayment.Amount:0.00}).\n\nPlease adjust the amounts so they add up correctly.",
+                            $"The sum of individual amounts (€{totalEntered:0.00}) does not match the total bill amount (€{finalAmount:0.00}).\n\nPlease adjust the amounts so they add up correctly.",
                             "Amount Mismatch",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
