@@ -59,7 +59,7 @@ namespace ChapeauService
             return (totalExVat, lowVatAmount, highVatAmount, totalWithVat);
         }
 
-        // NEW METHOD: Process complete invoice with all payments at once
+        // Process complete invoice with all payments at once
         public void ProcessCompleteInvoice(Invoice invoice, int orderId)
         {
             // First create the invoice in the database
@@ -83,61 +83,6 @@ namespace ChapeauService
             
             // Finally, mark the order as done
             orderDao.MarkOrderAsDone(orderId);
-        }
-
-        // Keep existing methods for backward compatibility if needed
-        public int CreateInvoice(int orderId, decimal totalAmount, decimal totalVat, 
-                               decimal lowVatAmount, decimal highVatAmount, 
-                               decimal totalExcludingVat, decimal tipAmount)
-        {
-            Invoice invoice = new Invoice
-            {
-                OrderId = new Order { OrderId = orderId },
-                TotalAmount = totalAmount,
-                TotalVat = totalVat,
-                LowVatAmount = lowVatAmount,
-                HighVatAmount = highVatAmount,
-                TotalExcludingVat = totalExcludingVat,
-                TotalTipAmount = tipAmount,
-                CreatedAt = DateTime.Now
-            };
-            
-            return invoiceDao.CreateInvoice(invoice);
-        }
-
-        // Process payment for an invoice
-        public int ProcessPayment(int invoiceId, PaymentMethod paymentMethod, 
-                                decimal amount, string feedback, FeedbackType feedbackType,
-                                bool markOrderAsDone = true)
-        {
-            // Get the full invoice object from the database
-            Invoice invoice = invoiceDao.GetInvoiceById(invoiceId);
-            
-            Payment payment = new Payment
-            {
-                InvoiceId = invoice,
-                PaymentMethod = paymentMethod,
-                Amount = amount,
-                Feedback = feedback,
-                FeedbackType = feedbackType,
-                CreatedAt = DateTime.Now
-            };
-            
-            int paymentId = paymentDao.CreatePayment(payment);
-            
-            // Mark the order as done
-            if (markOrderAsDone && invoice != null)
-            {
-                orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
-            }
-            
-            return paymentId;
-        }
-
-        // Check if an order has an existing invoice
-        public Invoice GetInvoiceForOrder(int orderId)
-        {
-            return invoiceDao.GetInvoiceByOrderId(orderId);
         }
     }
 }

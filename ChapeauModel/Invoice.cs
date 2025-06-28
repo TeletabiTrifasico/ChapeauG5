@@ -16,7 +16,6 @@ namespace ChapeauModel
         public decimal HighVatAmount { get; set; }
         public decimal TotalExcludingVat { get; set; } // Total excluding VAT
         
-        // Add list of payments - this replaces any PaymentInfo class
         public List<Payment> Payments { get; set; }
         
         public Invoice()
@@ -25,7 +24,6 @@ namespace ChapeauModel
             Payments = new List<Payment>();
         }
         
-        // Helper methods to work with the payment collection
         public decimal GetTotalPaidAmount()
         {
             return Payments?.Sum(p => p.Amount) ?? 0;
