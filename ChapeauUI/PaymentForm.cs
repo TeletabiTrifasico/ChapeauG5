@@ -29,74 +29,111 @@ namespace ChapeauG5
             this.loggedInEmployee = employee;
             this.paymentService = new PaymentService();
             this.orderService = new OrderService();
-            
-            // Initialize the main invoice object with empty payments list
             this.currentInvoice = new Invoice();
         }
 
         private void PaymentForm_Load(object sender, EventArgs e)
         {
             try
-            {                
-                // Load the order with all items using OrderService
-                currentOrder = orderService.GetOrderWithItemsById(orderId);
+            {
+                if (!LoadOrderData()) return;
                 
-                if (currentOrder == null)
-                {
-                    Console.WriteLine($"Error: Order #{orderId} not found in database");
-                    MessageBox.Show($"Order #{orderId} not found in the database.", "Order Not Found", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    this.Close();
-                    return;
-                }
-                
-                if (currentOrder.OrderItems == null || currentOrder.OrderItems.Count == 0)
-                {
-                    Console.WriteLine($"Error: Order #{orderId} has no items");
-                    MessageBox.Show("No items found in this order.", "Empty Order", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    this.Close();
-                    return;
-                }
-                
-                // Set the table number in the header
-                lblHeader.Text = $"Payment for Table {currentOrder.TableId.TableNumber}";
-                
-                // Initialize invoice with order totals
-                InitializeInvoiceData();
-                
-                // Load order items
-                LoadOrderItems();
-                // Calculate and display totals
-                UpdateTotalsDisplay();
-                // Setup combo boxes
-                SetupPaymentMethodComboBox();
-                SetupFeedbackTypeComboBox();
+                InitializeFormData();
+                SetupFormControls();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Critical error in PaymentForm_Load: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                MessageBox.Show($"Error loading payment information: {ex.Message}", 
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                this.Close();
+                HandleLoadError(ex);
             }
+        }
+
+        private bool LoadOrderData()
+        {
+            currentOrder = orderService.GetOrderWithItemsById(orderId);
+            
+            if (!ValidateOrderExists()) return false;
+            if (!ValidateOrderHasItems()) return false;
+            
+            return true;
+        }
+
+        private bool ValidateOrderExists()
+        {
+            if (currentOrder == null)
+            {
+                Console.WriteLine($"Error: Order #{orderId} not found in database");
+                ShowErrorAndClose("Order Not Found", $"Order #{orderId} not found in the database.");
+                return false;
+            }
+            return true;
+        }
+
+        private bool ValidateOrderHasItems()
+        {
+            if (currentOrder.OrderItems == null || currentOrder.OrderItems.Count == 0)
+            {
+                Console.WriteLine($"Error: Order #{orderId} has no items");
+                ShowErrorAndClose("Empty Order", "No items found in this order.");
+                return false;
+            }
+            return true;
+        }
+
+        private void ShowErrorAndClose(string title, string message)
+        {
+            MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            this.Close();
+        }
+
+        private void InitializeFormData()
+        {
+            SetHeaderText();
+            InitializeInvoiceData();
+            LoadOrderItems();
+            UpdateTotalsDisplay();
+        }
+
+        private void SetHeaderText()
+        {
+            lblHeader.Text = $"Payment for Table {currentOrder.TableId.TableNumber}";
+        }
+
+        private void SetupFormControls()
+        {
+            SetupPaymentMethodComboBox();
+            SetupFeedbackTypeComboBox();
+        }
+
+        private void HandleLoadError(Exception ex)
+        {
+            Console.WriteLine($"Critical error in PaymentForm_Load: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            MessageBox.Show($"Error loading payment information: {ex.Message}", 
+                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            this.Close();
         }
 
         private void InitializeInvoiceData()
         {
-            // Calculate order totals and store in the invoice
             var totals = paymentService.CalculateOrderTotals(currentOrder.OrderItems);
-            
-            // Set invoice properties with calculated totals
+            SetInvoiceBasicInfo(totals);
+            SetInvoiceAmounts(totals);
+        }
+
+        private void SetInvoiceBasicInfo((decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) totals)
+        {
             currentInvoice.OrderId = currentOrder;
+            currentInvoice.TotalTipAmount = 0;
+            currentInvoice.CreatedAt = DateTime.Now;
+        }
+
+        private void SetInvoiceAmounts((decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) totals)
+        {
             currentInvoice.TotalAmount = totals.totalWithVat;
             currentInvoice.TotalVat = totals.lowVat + totals.highVat;
             currentInvoice.LowVatAmount = totals.lowVat;
             currentInvoice.HighVatAmount = totals.highVat;
             currentInvoice.TotalExcludingVat = totals.totalExVat;
-            currentInvoice.TotalTipAmount = 0; // Will be updated when tip is entered
-            currentInvoice.CreatedAt = DateTime.Now;
         }
 
         private void LoadOrderItems()
@@ -105,36 +142,62 @@ namespace ChapeauG5
             
             foreach (OrderItem item in currentOrder.OrderItems)
             {
-                // Get VAT rate directly from the menu item
-                string vatRate = item.MenuItemId.VatPercentage == 21 ? "21%" : "9%";
-                decimal subtotal = item.Quantity * item.MenuItemId.Price;
-                
-                ListViewItem lvi = new ListViewItem(item.MenuItemId.Name);
-                lvi.SubItems.Add(item.Quantity.ToString());
-                lvi.SubItems.Add($"€{item.MenuItemId.Price:0.00}");
-                lvi.SubItems.Add(vatRate);
-                lvi.SubItems.Add($"€{subtotal:0.00}");
-                lvi.Tag = item;
-                
-                lvOrderItems.Items.Add(lvi);
+                AddOrderItemToListView(item);
             }
+        }
+
+        private void AddOrderItemToListView(OrderItem item)
+        {
+            string vatRate = GetVatRateDisplay(item.MenuItemId.VatPercentage);
+            decimal subtotal = CalculateItemSubtotal(item);
+            
+            ListViewItem lvi = CreateListViewItem(item, vatRate, subtotal);
+            lvOrderItems.Items.Add(lvi);
+        }
+
+        private string GetVatRateDisplay(int vatPercentage)
+        {
+            return vatPercentage == 21 ? "21%" : "9%";
+        }
+
+        private decimal CalculateItemSubtotal(OrderItem item)
+        {
+            return item.Quantity * item.MenuItemId.Price;
+        }
+
+        private ListViewItem CreateListViewItem(OrderItem item, string vatRate, decimal subtotal)
+        {
+            ListViewItem lvi = new ListViewItem(item.MenuItemId.Name);
+            lvi.SubItems.Add(item.Quantity.ToString());
+            lvi.SubItems.Add($"€{item.MenuItemId.Price:0.00}");
+            lvi.SubItems.Add(vatRate);
+            lvi.SubItems.Add($"€{subtotal:0.00}");
+            lvi.Tag = item;
+            return lvi;
         }
 
         private void UpdateTotalsDisplay()
         {
-            // Update display labels using invoice data
+            SetTotalLabels();
+            UpdateFinalAmount();
+        }
+
+        private void SetTotalLabels()
+        {
             lblSubtotalValue.Text = $"€{currentInvoice.TotalExcludingVat:0.00}";
             lblLowVatValue.Text = $"€{currentInvoice.LowVatAmount:0.00}";
             lblHighVatValue.Text = $"€{currentInvoice.HighVatAmount:0.00}";
             lblTotalValue.Text = $"€{currentInvoice.TotalAmount:0.00}";
-            
-            // Calculate and display final amount with tip
-            UpdateFinalAmount();
         }
         
         private void UpdateFinalAmount()
         {
-            // Get tip amount from input
+            UpdateTipAmount();
+            CalculateAndDisplayFinalAmount();
+        }
+
+        private void UpdateTipAmount()
+        {
             if (decimal.TryParse(txtTip.Text, out decimal tip))
             {
                 currentInvoice.TotalTipAmount = tip;
@@ -143,11 +206,11 @@ namespace ChapeauG5
             {
                 currentInvoice.TotalTipAmount = 0;
             }
-            
-            // Calculate total amount including tip
-            decimal finalAmount = currentInvoice.TotalAmount + currentInvoice.TotalTipAmount;
-            
-            // Update display
+        }
+
+        private void CalculateAndDisplayFinalAmount()
+        {
+            decimal finalAmount = GetFinalAmount();
             lblFinalAmountValue.Text = $"€{finalAmount:0.00}";
         }
 
@@ -158,35 +221,65 @@ namespace ChapeauG5
 
         private void SetupPaymentMethodComboBox()
         {
+            InitializePaymentMethodCombo();
+            AddPaymentMethodItems();
+            SetDefaultPaymentMethod();
+        }
+
+        private void InitializePaymentMethodCombo()
+        {
             cmbPaymentMethod.Items.Clear();
             cmbPaymentMethod.DisplayMember = "Text";
             cmbPaymentMethod.ValueMember = "Value";
+        }
+
+        private void AddPaymentMethodItems()
+        {
             cmbPaymentMethod.Items.Add(new { Text = "Cash", Value = PaymentMethod.Cash });
             cmbPaymentMethod.Items.Add(new { Text = "Debit Card", Value = PaymentMethod.DebitCard });
             cmbPaymentMethod.Items.Add(new { Text = "Credit Card", Value = PaymentMethod.CreditCard });
-            
+        }
+
+        private void SetDefaultPaymentMethod()
+        {
             cmbPaymentMethod.SelectedIndex = 0;
         }
         
         private void SetupFeedbackTypeComboBox()
         {
+            InitializeFeedbackTypeCombo();
+            AddFeedbackTypeItems();
+            SetDefaultFeedbackType();
+        }
+
+        private void InitializeFeedbackTypeCombo()
+        {
             cmbFeedbackType.Items.Clear();
             cmbFeedbackType.DisplayMember = "Text";
             cmbFeedbackType.ValueMember = "Value";
-            
+        }
+
+        private void AddFeedbackTypeItems()
+        {
             cmbFeedbackType.Items.Add(new { Text = "None", Value = FeedbackType.None });
             cmbFeedbackType.Items.Add(new { Text = "Comment", Value = FeedbackType.Comment });
             cmbFeedbackType.Items.Add(new { Text = "Complaint", Value = FeedbackType.Complaint });
             cmbFeedbackType.Items.Add(new { Text = "Recommendation", Value = FeedbackType.Recommendation });
-            
+        }
+
+        private void SetDefaultFeedbackType()
+        {
             cmbFeedbackType.SelectedIndex = 0;
         }
 
         private void txtTip_TextChanged(object sender, EventArgs e)
         {
             UpdateFinalAmount();
-            
-            // If custom split is enabled, update custom amounts when tip changes
+            HandleTipChangeForCustomSplit();
+        }
+
+        private void HandleTipChangeForCustomSplit()
+        {
             if (IsSplittingBill() && IsCustomSplit())
             {
                 ReinitializeCustomSplitAmounts();
@@ -210,69 +303,103 @@ namespace ChapeauG5
 
         private void ReinitializeCustomSplitAmounts()
         {
-            // Clear existing payments in the invoice and reinitialize with even amounts
+            ClearExistingPayments();
+            CreateEvenSplitPayments();
+            AdjustForRounding();
+            UpdateCustomSplitDisplay();
+        }
+
+        private void ClearExistingPayments()
+        {
             currentInvoice.Payments.Clear();
+        }
+
+        private void CreateEvenSplitPayments()
+        {
             decimal finalAmount = GetFinalAmount();
             decimal evenSplit = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
             
             for (int i = 0; i < GetNumberOfSplits(); i++)
             {
-                Payment splitPayment = new Payment
-                {
-                    Amount = evenSplit,
-                    InvoiceId = currentInvoice
-                };
-                currentInvoice.Payments.Add(splitPayment);
+                AddSplitPayment(evenSplit);
             }
-            
-            // Adjust last amount to account for rounding
+        }
+
+        private void AddSplitPayment(decimal amount)
+        {
+            Payment splitPayment = new Payment
+            {
+                Amount = amount,
+                InvoiceId = currentInvoice
+            };
+            currentInvoice.Payments.Add(splitPayment);
+        }
+
+        private void AdjustForRounding()
+        {
             if (currentInvoice.Payments.Count > 0)
             {
                 decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
-                decimal difference = finalAmount - totalCustom;
+                decimal difference = GetFinalAmount() - totalCustom;
                 currentInvoice.Payments[currentInvoice.Payments.Count - 1].Amount += difference;
             }
-            
-            UpdateCustomSplitDisplay();
         }
         
         private void cmbFeedbackType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Enable the feedback textbox only if a feedback type other than None is selected
             dynamic selectedItem = cmbFeedbackType.SelectedItem;
             FeedbackType feedbackType = (FeedbackType)selectedItem.Value;
             
+            UpdateFeedbackTextBoxState(feedbackType);
+        }
+
+        private void UpdateFeedbackTextBoxState(FeedbackType feedbackType)
+        {
             txtFeedback.Enabled = feedbackType != FeedbackType.None;
-            txtFeedback.Text = feedbackType == FeedbackType.None ? "" : txtFeedback.Text;
+            if (feedbackType == FeedbackType.None)
+            {
+                txtFeedback.Text = "";
+            }
         }
 
         private void chkSplitBill_CheckedChanged(object sender, EventArgs e)
         {
             bool isSplitting = IsSplittingBill();
             
+            ToggleSplitControls(isSplitting);
+            HandleSplitBillChange(isSplitting);
+        }
+
+        private void ToggleSplitControls(bool isSplitting)
+        {
             nudNumberOfSplits.Visible = isSplitting;
             lblNumberOfSplits.Visible = isSplitting;
             chkCustomSplit.Visible = isSplitting;
-            
-            // Show the split amount if splitting
+        }
+
+        private void HandleSplitBillChange(bool isSplitting)
+        {
             if (isSplitting)
             {
                 UpdateSplitAmount();
             }
             else
             {
-                // Hide custom split controls when not splitting
-                chkCustomSplit.Checked = false;
-                btnConfigureCustomSplit.Visible = false;
-                lblCustomSplitStatus.Visible = false;
-                lblSplitAmount.Visible = false;
-                currentInvoice.Payments.Clear();
+                HideCustomSplitControls();
+                ClearExistingPayments();
             }
+        }
+
+        private void HideCustomSplitControls()
+        {
+            chkCustomSplit.Checked = false;
+            btnConfigureCustomSplit.Visible = false;
+            lblCustomSplitStatus.Visible = false;
+            lblSplitAmount.Visible = false;
         }
 
         private void nudNumberOfSplits_ValueChanged(object sender, EventArgs e)
         {
-            // If custom split is enabled, reinitialize custom amounts
             if (IsCustomSplit())
             {
                 ReinitializeCustomSplitAmounts();
@@ -291,182 +418,243 @@ namespace ChapeauG5
             }
             else
             {
-                decimal finalAmount = GetFinalAmount();
-                decimal splitAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
-                lblSplitAmount.Text = $"Each person pays: €{splitAmount:0.00}";
-                lblSplitAmount.Visible = true;
+                ShowEqualSplitAmount();
             }
+        }
+
+        private void ShowEqualSplitAmount()
+        {
+            decimal finalAmount = GetFinalAmount();
+            decimal splitAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
+            lblSplitAmount.Text = $"Each person pays: €{splitAmount:0.00}";
+            lblSplitAmount.Visible = true;
         }
 
         private void btnProcessPayment_Click(object sender, EventArgs e)
         {
             try
             {
-                if (IsSplittingBill())
-                {
-                    ProcessSplitPayment();
-                }
-                else
-                {
-                    ProcessSinglePayment();
-                }
+                ProcessPaymentBasedOnType();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error processing payment: {ex.Message}", 
-                    "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowPaymentError(ex);
             }
+        }
+
+        private void ProcessPaymentBasedOnType()
+        {
+            if (IsSplittingBill())
+            {
+                ProcessSplitPayment();
+            }
+            else
+            {
+                ProcessSinglePayment();
+            }
+        }
+
+        private void ShowPaymentError(Exception ex)
+        {
+            MessageBox.Show($"Error processing payment: {ex.Message}", 
+                "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void ProcessSinglePayment()
         {
-            // Get payment details from form
+            var paymentInfo = GetPaymentInfoFromForm();
+            
+            if (ConfirmSinglePayment(paymentInfo.paymentMethod, paymentInfo.finalAmount))
+            {
+                CompleteSinglePayment(paymentInfo);
+            }
+        }
+
+        private (PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) GetPaymentInfoFromForm()
+        {
             dynamic selectedPaymentMethod = cmbPaymentMethod.SelectedItem;
-            PaymentMethod paymentMethod = (PaymentMethod)selectedPaymentMethod.Value;
-            
             dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
-            FeedbackType feedbackType = (FeedbackType)selectedFeedbackType.Value;
-            string feedback = txtFeedback.Text;
             
-            decimal finalAmount = GetFinalAmount();
-            
-            // Confirm payment
+            return (
+                (PaymentMethod)selectedPaymentMethod.Value,
+                (FeedbackType)selectedFeedbackType.Value,
+                txtFeedback.Text,
+                GetFinalAmount()
+            );
+        }
+
+        private bool ConfirmSinglePayment(PaymentMethod paymentMethod, decimal finalAmount)
+        {
             DialogResult result = MessageBox.Show(
                 $"Process payment of €{finalAmount:0.00} using {paymentMethod}?",
                 "Confirm Payment",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
             
-            if (result == DialogResult.Yes)
+            return result == DialogResult.Yes;
+        }
+
+        private void CompleteSinglePayment((PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) paymentInfo)
+        {
+            Payment payment = CreatePaymentObject(paymentInfo);
+            currentInvoice.AddPayment(payment);
+            
+            SavePaymentToDatabase();
+            ShowSuccessAndClose();
+        }
+
+        private Payment CreatePaymentObject((PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) paymentInfo)
+        {
+            return new Payment
             {
-                // Prepare the complete invoice with payment in memory first
-                Payment payment = new Payment
-                {
-                    PaymentMethod = paymentMethod,
-                    Amount = finalAmount,
-                    Feedback = feedback,
-                    FeedbackType = feedbackType
-                };
-                
-                currentInvoice.AddPayment(payment);
-                
-                // Now store everything to database at once
-                try
-                {
-                    paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
-                    
-                    MessageBox.Show(
-                        "Payment processed successfully!",
-                        "Payment Complete",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error saving payment: {ex.Message}", 
-                        "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                PaymentMethod = paymentInfo.paymentMethod,
+                Amount = paymentInfo.finalAmount,
+                Feedback = paymentInfo.feedback,
+                FeedbackType = paymentInfo.feedbackType
+            };
+        }
+
+        private void SavePaymentToDatabase()
+        {
+            try
+            {
+                paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving payment: {ex.Message}", 
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
+        }
+
+        private void ShowSuccessAndClose()
+        {
+            MessageBox.Show(
+                "Payment processed successfully!",
+                "Payment Complete",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            
+            this.DialogResult = DialogResult.OK;
+            this.Close();
         }
 
         private void ProcessSplitPayment()
         {
-            // Validate custom split amounts if using custom split
-            if (IsCustomSplit())
-            {
-                if (currentInvoice.Payments.Count != GetNumberOfSplits())
-                {
-                    MessageBox.Show(
-                        "Please configure the custom split amounts before proceeding.",
-                        "Custom Split Not Configured",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
-                }
-                
-                decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
-                decimal finalAmount = GetFinalAmount();
-                if (Math.Abs(totalCustom - finalAmount) >= 0.01m)
-                {
-                    MessageBox.Show(
-                        $"The sum of custom amounts (€{totalCustom:0.00}) does not match the total bill (€{finalAmount:0.00}).\n\nPlease reconfigure the amounts.",
-                        "Amount Mismatch",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
-                }
-            }
+            if (!ValidateSplitPayment()) return;
             
-            // Prepare all payments first before saving to database
-            List<Payment> allPayments = PrepareAllSplitPayments();
+            var allPayments = PrepareAllSplitPayments();
             
             if (allPayments != null && allPayments.Count > 0)
             {
-                // Clear existing payments and add the complete list
-                currentInvoice.Payments.Clear();
-                foreach (Payment payment in allPayments)
-                {
-                    currentInvoice.AddPayment(payment);
-                }
-                
-                // Now store the complete invoice with all payments to database
-                try
-                {
-                    paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
-                    
-                    ShowPaymentSummary();
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error saving split payments: {ex.Message}", 
-                        "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                CompleteSplitPayment(allPayments);
             }
             else
             {
-                MessageBox.Show("Payment process was canceled.", 
-                    "Payment Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowPaymentCanceled();
             }
+        }
+
+        private bool ValidateSplitPayment()
+        {
+            if (IsCustomSplit())
+            {
+                return ValidateCustomSplitConfiguration() && ValidateCustomSplitAmounts();
+            }
+            return true;
+        }
+
+        private bool ValidateCustomSplitConfiguration()
+        {
+            if (currentInvoice.Payments.Count != GetNumberOfSplits())
+            {
+                MessageBox.Show(
+                    "Please configure the custom split amounts before proceeding.",
+                    "Custom Split Not Configured",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        private bool ValidateCustomSplitAmounts()
+        {
+            decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
+            decimal finalAmount = GetFinalAmount();
+            
+            if (Math.Abs(totalCustom - finalAmount) >= 0.01m)
+            {
+                ShowAmountMismatchError(totalCustom, finalAmount);
+                return false;
+            }
+            return true;
+        }
+
+        private void ShowAmountMismatchError(decimal totalCustom, decimal finalAmount)
+        {
+            MessageBox.Show(
+                $"The sum of custom amounts (€{totalCustom:0.00}) does not match the total bill (€{finalAmount:0.00}).\n\nPlease reconfigure the amounts.",
+                "Amount Mismatch",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+
+        private void CompleteSplitPayment(List<Payment> allPayments)
+        {
+            UpdateInvoiceWithPayments(allPayments);
+            SaveSplitPaymentToDatabase();
+            ShowSplitPaymentSummary();
+        }
+
+        private void UpdateInvoiceWithPayments(List<Payment> allPayments)
+        {
+            currentInvoice.Payments.Clear();
+            foreach (Payment payment in allPayments)
+            {
+                currentInvoice.AddPayment(payment);
+            }
+        }
+
+        private void SaveSplitPaymentToDatabase()
+        {
+            try
+            {
+                paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving split payments: {ex.Message}", 
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
+        }
+
+        private void ShowSplitPaymentSummary()
+        {
+            ShowPaymentSummary();
+            this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+
+        private void ShowPaymentCanceled()
+        {
+            MessageBox.Show("Payment process was canceled.", 
+                "Payment Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private List<Payment> PrepareAllSplitPayments()
         {
             List<Payment> payments = new List<Payment>();
             int numberOfSplits = GetNumberOfSplits();
-            decimal finalAmount = GetFinalAmount();
             
-            // Use while loop instead of recursive method calls
             int currentPaymentIndex = 0;
             while (currentPaymentIndex < numberOfSplits)
             {
-                decimal amountToPay;
+                Payment splitPayment = ProcessSingleSplitPayment(currentPaymentIndex, numberOfSplits);
                 
-                if (IsCustomSplit())
-                {
-                    // Use custom split amounts
-                    amountToPay = currentInvoice.Payments[currentPaymentIndex].Amount;
-                }
-                else
-                {
-                    // Calculate equal split amounts
-                    decimal splitAmount = decimal.Round(finalAmount / numberOfSplits, 2);
-                    decimal lastSplitAmount = finalAmount - (splitAmount * (numberOfSplits - 1));
-                    amountToPay = (currentPaymentIndex == numberOfSplits - 1) ? lastSplitAmount : splitAmount;
-                }
-                
-                // Show payment dialog for this split
-                Payment splitPayment = CollectSplitPaymentInfo(currentPaymentIndex + 1, numberOfSplits, amountToPay);
-                
-                if (splitPayment == null)
-                {
-                    // User canceled - return null to indicate cancellation
-                    return null;
-                }
+                if (splitPayment == null) return null;
                 
                 payments.Add(splitPayment);
                 currentPaymentIndex++;
@@ -475,62 +663,116 @@ namespace ChapeauG5
             return payments;
         }
 
+        private Payment ProcessSingleSplitPayment(int currentPaymentIndex, int numberOfSplits)
+        {
+            decimal amountToPay = GetAmountForSplit(currentPaymentIndex, numberOfSplits);
+            return CollectSplitPaymentInfo(currentPaymentIndex + 1, numberOfSplits, amountToPay);
+        }
+
+        private decimal GetAmountForSplit(int currentPaymentIndex, int numberOfSplits)
+        {
+            if (IsCustomSplit())
+            {
+                return currentInvoice.Payments[currentPaymentIndex].Amount;
+            }
+            else
+            {
+                return CalculateEqualSplitAmount(currentPaymentIndex, numberOfSplits);
+            }
+        }
+
+        private decimal CalculateEqualSplitAmount(int currentPaymentIndex, int numberOfSplits)
+        {
+            decimal finalAmount = GetFinalAmount();
+            decimal splitAmount = decimal.Round(finalAmount / numberOfSplits, 2);
+            decimal lastSplitAmount = finalAmount - (splitAmount * (numberOfSplits - 1));
+            
+            return (currentPaymentIndex == numberOfSplits - 1) ? lastSplitAmount : splitAmount;
+        }
+
         private Payment CollectSplitPaymentInfo(int paymentNumber, int totalPayments, decimal amountToPay)
         {
-            using (Form paymentDialog = new Form())
+            using (Form paymentDialog = CreateSplitPaymentDialog(paymentNumber, totalPayments))
             {
-                paymentDialog.Text = $"Payment {paymentNumber} of {totalPayments}";
-                paymentDialog.Size = new Size(400, 350);
-                paymentDialog.StartPosition = FormStartPosition.CenterParent;
-                paymentDialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                paymentDialog.MaximizeBox = false;
-                paymentDialog.MinimizeBox = false;
-                
-                // Create dialog controls
-                var controls = CreateSplitPaymentDialogControls(amountToPay);
-                
-                foreach (Control control in controls)
-                {
-                    paymentDialog.Controls.Add(control);
-                }
+                AddControlsToDialog(paymentDialog, amountToPay);
                 
                 if (paymentDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Get values from dialog
-                    var cmbMethod = paymentDialog.Controls.OfType<ComboBox>().First(c => c.Name == "cmbMethod");
-                    var cmbFeedbackType = paymentDialog.Controls.OfType<ComboBox>().First(c => c.Name == "cmbFeedbackType");
-                    var txtSplitFeedback = paymentDialog.Controls.OfType<TextBox>().First(c => c.Name == "txtSplitFeedback");
-                    
-                    dynamic selectedMethod = cmbMethod.SelectedItem;
-                    PaymentMethod paymentMethod = (PaymentMethod)selectedMethod.Value;
-                    
-                    dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
-                    FeedbackType splitFeedbackType = (FeedbackType)selectedFeedbackType.Value;
-                    string splitFeedback = txtSplitFeedback.Text;
-                    
-                    // Create and return the payment object
-                    return new Payment
-                    {
-                        PaymentMethod = paymentMethod,
-                        Amount = amountToPay,
-                        Feedback = splitFeedback,
-                        FeedbackType = splitFeedbackType,
-                        InvoiceId = currentInvoice
-                    };
+                    return ExtractPaymentFromDialog(paymentDialog, amountToPay);
                 }
                 else
                 {
-                    // User canceled
                     return null;
                 }
             }
+        }
+
+        private Form CreateSplitPaymentDialog(int paymentNumber, int totalPayments)
+        {
+            Form paymentDialog = new Form();
+            paymentDialog.Text = $"Payment {paymentNumber} of {totalPayments}";
+            paymentDialog.Size = new Size(400, 350);
+            paymentDialog.StartPosition = FormStartPosition.CenterParent;
+            paymentDialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+            paymentDialog.MaximizeBox = false;
+            paymentDialog.MinimizeBox = false;
+            return paymentDialog;
+        }
+
+        private void AddControlsToDialog(Form paymentDialog, decimal amountToPay)
+        {
+            var controls = CreateSplitPaymentDialogControls(amountToPay);
+            
+            foreach (Control control in controls)
+            {
+                paymentDialog.Controls.Add(control);
+            }
+        }
+
+        private Payment ExtractPaymentFromDialog(Form paymentDialog, decimal amountToPay)
+        {
+            var dialogData = GetDialogValues(paymentDialog);
+            
+            return new Payment
+            {
+                PaymentMethod = dialogData.paymentMethod,
+                Amount = amountToPay,
+                Feedback = dialogData.feedback,
+                FeedbackType = dialogData.feedbackType,
+                InvoiceId = currentInvoice
+            };
+        }
+
+        private (PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback) GetDialogValues(Form paymentDialog)
+        {
+            var cmbMethod = paymentDialog.Controls.OfType<ComboBox>().First(c => c.Name == "cmbMethod");
+            var cmbFeedbackType = paymentDialog.Controls.OfType<ComboBox>().First(c => c.Name == "cmbFeedbackType");
+            var txtSplitFeedback = paymentDialog.Controls.OfType<TextBox>().First(c => c.Name == "txtSplitFeedback");
+            
+            dynamic selectedMethod = cmbMethod.SelectedItem;
+            dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
+            
+            return (
+                (PaymentMethod)selectedMethod.Value,
+                (FeedbackType)selectedFeedbackType.Value,
+                txtSplitFeedback.Text
+            );
         }
 
         private List<Control> CreateSplitPaymentDialogControls(decimal amountToPay)
         {
             var controls = new List<Control>();
             
-            // Amount label
+            AddAmountLabel(controls, amountToPay);
+            AddPaymentMethodControls(controls);
+            AddFeedbackControls(controls);
+            AddDialogButtons(controls);
+            
+            return controls;
+        }
+
+        private void AddAmountLabel(List<Control> controls, decimal amountToPay)
+        {
             var lblAmount = new Label
             {
                 Text = $"Amount: €{amountToPay:0.00}",
@@ -539,16 +781,29 @@ namespace ChapeauG5
                 Font = new Font("Segoe UI", 11, FontStyle.Bold)
             };
             controls.Add(lblAmount);
+        }
+
+        private void AddPaymentMethodControls(List<Control> controls)
+        {
+            var lblMethod = CreateLabel("Payment Method:", new Point(20, 60));
+            var cmbMethod = CreatePaymentMethodCombo();
             
-            // Payment method
-            var lblMethod = new Label
+            controls.Add(lblMethod);
+            controls.Add(cmbMethod);
+        }
+
+        private Label CreateLabel(string text, Point location)
+        {
+            return new Label
             {
-                Text = "Payment Method:",
-                Location = new Point(20, 60),
+                Text = text,
+                Location = location,
                 Size = new Size(150, 25)
             };
-            controls.Add(lblMethod);
-            
+        }
+
+        private ComboBox CreatePaymentMethodCombo()
+        {
             var cmbMethod = new ComboBox
             {
                 Name = "cmbMethod",
@@ -558,21 +813,33 @@ namespace ChapeauG5
                 DisplayMember = "Text",
                 ValueMember = "Value"
             };
+            
+            PopulatePaymentMethodCombo(cmbMethod);
+            return cmbMethod;
+        }
+
+        private void PopulatePaymentMethodCombo(ComboBox cmbMethod)
+        {
             cmbMethod.Items.Add(new { Text = "Cash", Value = PaymentMethod.Cash });
             cmbMethod.Items.Add(new { Text = "Debit Card", Value = PaymentMethod.DebitCard });
             cmbMethod.Items.Add(new { Text = "Credit Card", Value = PaymentMethod.CreditCard });
             cmbMethod.SelectedIndex = 0;
-            controls.Add(cmbMethod);
+        }
+
+        private void AddFeedbackControls(List<Control> controls)
+        {
+            var lblFeedbackType = CreateLabel("Feedback Type:", new Point(20, 100));
+            var cmbFeedbackType = CreateFeedbackTypeCombo();
+            var lblSplitFeedback = CreateLabel("Feedback:", new Point(20, 140));
+            var txtSplitFeedback = CreateFeedbackTextBox();
             
-            // Feedback type
-            var lblFeedbackType = new Label
-            {
-                Text = "Feedback Type:",
-                Location = new Point(20, 100),
-                Size = new Size(150, 25)
-            };
-            controls.Add(lblFeedbackType);
+            SetupFeedbackTypeEventHandler(cmbFeedbackType, txtSplitFeedback);
             
+            controls.AddRange(new Control[] { lblFeedbackType, cmbFeedbackType, lblSplitFeedback, txtSplitFeedback });
+        }
+
+        private ComboBox CreateFeedbackTypeCombo()
+        {
             var cmbFeedbackType = new ComboBox
             {
                 Name = "cmbFeedbackType",
@@ -582,23 +849,23 @@ namespace ChapeauG5
                 DisplayMember = "Text",
                 ValueMember = "Value"
             };
+            
+            PopulateFeedbackTypeCombo(cmbFeedbackType);
+            return cmbFeedbackType;
+        }
+
+        private void PopulateFeedbackTypeCombo(ComboBox cmbFeedbackType)
+        {
             cmbFeedbackType.Items.Add(new { Text = "None", Value = FeedbackType.None });
             cmbFeedbackType.Items.Add(new { Text = "Comment", Value = FeedbackType.Comment });
             cmbFeedbackType.Items.Add(new { Text = "Complaint", Value = FeedbackType.Complaint });
             cmbFeedbackType.Items.Add(new { Text = "Recommendation", Value = FeedbackType.Recommendation });
             cmbFeedbackType.SelectedIndex = 0;
-            controls.Add(cmbFeedbackType);
-            
-            // Feedback text
-            var lblSplitFeedback = new Label
-            {
-                Text = "Feedback:",
-                Location = new Point(20, 140),
-                Size = new Size(150, 25)
-            };
-            controls.Add(lblSplitFeedback);
-            
-            var txtSplitFeedback = new TextBox
+        }
+
+        private TextBox CreateFeedbackTextBox()
+        {
+            return new TextBox
             {
                 Name = "txtSplitFeedback",
                 Location = new Point(20, 170),
@@ -606,63 +873,83 @@ namespace ChapeauG5
                 Multiline = true,
                 Enabled = false
             };
-            controls.Add(txtSplitFeedback);
-            
-            // Enable/disable feedback text field based on selected feedback type
+        }
+
+        private void SetupFeedbackTypeEventHandler(ComboBox cmbFeedbackType, TextBox txtSplitFeedback)
+        {
             cmbFeedbackType.SelectedIndexChanged += (s, e) => {
                 dynamic selectedItem = cmbFeedbackType.SelectedItem;
                 FeedbackType ft = (FeedbackType)selectedItem.Value;
                 txtSplitFeedback.Enabled = ft != FeedbackType.None;
-                if (ft == FeedbackType.None)
-                    txtSplitFeedback.Text = "";
+                if (ft == FeedbackType.None) txtSplitFeedback.Text = "";
             };
+        }
+
+        private void AddDialogButtons(List<Control> controls)
+        {
+            var btnPay = CreateButton("Pay", new Point(200, 270), DialogResult.OK);
+            var btnCancel = CreateButton("Cancel", new Point(290, 270), DialogResult.Cancel);
             
-            // Buttons
-            var btnPay = new Button
-            {
-                Text = "Pay",
-                DialogResult = DialogResult.OK,
-                Location = new Point(200, 270),
-                Size = new Size(80, 30)
-            };
             controls.Add(btnPay);
-            
-            var btnCancel = new Button
+            controls.Add(btnCancel);
+        }
+
+        private Button CreateButton(string text, Point location, DialogResult dialogResult)
+        {
+            return new Button
             {
-                Text = "Cancel",
-                DialogResult = DialogResult.Cancel,
-                Location = new Point(290, 270),
+                Text = text,
+                DialogResult = dialogResult,
+                Location = location,
                 Size = new Size(80, 30)
             };
-            controls.Add(btnCancel);
-            
-            return controls;
         }
 
         private void ShowPaymentSummary()
         {
-            // Show a summary of the payments using the invoice's payment collection
+            StringBuilder summary = BuildPaymentSummary();
+            MessageBox.Show(summary.ToString(), "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private StringBuilder BuildPaymentSummary()
+        {
             StringBuilder summary = new StringBuilder();
+            AddSummaryHeader(summary);
+            AddPaymentDetails(summary);
+            AddSummaryTotals(summary);
+            return summary;
+        }
+
+        private void AddSummaryHeader(StringBuilder summary)
+        {
             summary.AppendLine("Split Bill Payment Summary:");
             summary.AppendLine("---------------------------");
-            
+        }
+
+        private void AddPaymentDetails(StringBuilder summary)
+        {
             for (int i = 0; i < currentInvoice.Payments.Count; i++)
             {
                 var payment = currentInvoice.Payments[i];
                 summary.AppendLine($"Payment {i+1}: {payment.PaymentMethod} - €{payment.Amount:0.00}");
                 
-                // Add feedback information
-                if (payment.FeedbackType != FeedbackType.None && !string.IsNullOrEmpty(payment.Feedback))
-                {
-                    summary.AppendLine($"  Feedback ({payment.FeedbackType}): {payment.Feedback}");
-                }
+                AddFeedbackToSummary(summary, payment);
             }
-            
+        }
+
+        private void AddFeedbackToSummary(StringBuilder summary, Payment payment)
+        {
+            if (payment.FeedbackType != FeedbackType.None && !string.IsNullOrEmpty(payment.Feedback))
+            {
+                summary.AppendLine($"  Feedback ({payment.FeedbackType}): {payment.Feedback}");
+            }
+        }
+
+        private void AddSummaryTotals(StringBuilder summary)
+        {
             summary.AppendLine($"\nTotal Paid: €{currentInvoice.GetTotalPaidAmount():0.00}");
             summary.AppendLine($"Invoice Total: €{GetFinalAmount():0.00}");
             summary.AppendLine($"Status: {(currentInvoice.IsFullyPaid() ? "FULLY PAID" : "PARTIALLY PAID")}");
-            
-            MessageBox.Show(summary.ToString(), "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
@@ -675,18 +962,27 @@ namespace ChapeauG5
         {
             bool isCustom = IsCustomSplit();
             
+            ToggleCustomSplitControls(isCustom);
+            HandleCustomSplitChange(isCustom);
+        }
+
+        private void ToggleCustomSplitControls(bool isCustom)
+        {
             btnConfigureCustomSplit.Visible = isCustom;
             lblCustomSplitStatus.Visible = isCustom;
-            
+        }
+
+        private void HandleCustomSplitChange(bool isCustom)
+        {
             if (isCustom)
             {
                 ReinitializeCustomSplitAmounts();
-                lblSplitAmount.Visible = false; // Hide equal split display
+                lblSplitAmount.Visible = false;
             }
             else
             {
-                currentInvoice.Payments.Clear();
-                UpdateSplitAmount(); // Show equal split display
+                ClearExistingPayments();
+                UpdateSplitAmount();
             }
         }
 
@@ -699,203 +995,341 @@ namespace ChapeauG5
         {
             if (currentInvoice.Payments.Count > 0)
             {
-                decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
-                decimal finalAmount = GetFinalAmount();
-                
-                if (Math.Abs(totalCustom - finalAmount) < 0.01m) // Account for rounding differences
-                {
-                    lblCustomSplitStatus.Text = $"Custom amounts configured (Total: €{totalCustom:0.00})";
-                    lblCustomSplitStatus.ForeColor = Color.DarkGreen;
-                }
-                else
-                {
-                    lblCustomSplitStatus.Text = $"Custom amounts mismatch! Expected: €{finalAmount:0.00}, Current: €{totalCustom:0.00}";
-                    lblCustomSplitStatus.ForeColor = Color.Red;
-                }
+                ShowCustomSplitStatus();
             }
             else
             {
-                lblCustomSplitStatus.Text = "Custom amounts not configured";
-                lblCustomSplitStatus.ForeColor = Color.DarkBlue;
+                ShowNotConfiguredStatus();
             }
+        }
+
+        private void ShowCustomSplitStatus()
+        {
+            decimal totalCustom = currentInvoice.Payments.Sum(p => p.Amount);
+            decimal finalAmount = GetFinalAmount();
+            
+            if (Math.Abs(totalCustom - finalAmount) < 0.01m)
+            {
+                ShowValidCustomSplitStatus(totalCustom);
+            }
+            else
+            {
+                ShowInvalidCustomSplitStatus(finalAmount, totalCustom);
+            }
+        }
+
+        private void ShowValidCustomSplitStatus(decimal totalCustom)
+        {
+            lblCustomSplitStatus.Text = $"Custom amounts configured (Total: €{totalCustom:0.00})";
+            lblCustomSplitStatus.ForeColor = Color.DarkGreen;
+        }
+
+        private void ShowInvalidCustomSplitStatus(decimal finalAmount, decimal totalCustom)
+        {
+            lblCustomSplitStatus.Text = $"Custom amounts mismatch! Expected: €{finalAmount:0.00}, Current: €{totalCustom:0.00}";
+            lblCustomSplitStatus.ForeColor = Color.Red;
+        }
+
+        private void ShowNotConfiguredStatus()
+        {
+            lblCustomSplitStatus.Text = "Custom amounts not configured";
+            lblCustomSplitStatus.ForeColor = Color.DarkBlue;
         }
 
         private void ShowCustomSplitDialog()
         {
-            using (Form customSplitDialog = new Form())
+            using (Form customSplitDialog = CreateCustomSplitDialog())
             {
-                customSplitDialog.Text = "Configure Custom Split Amounts";
-                customSplitDialog.Size = new Size(500, 400);
-                customSplitDialog.StartPosition = FormStartPosition.CenterParent;
-                customSplitDialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                customSplitDialog.MaximizeBox = false;
-                customSplitDialog.MinimizeBox = false;
-                
-                decimal finalAmount = GetFinalAmount();
-                
-                // Header label
-                Label lblHeader = new Label();
-                lblHeader.Text = $"Total Amount to Split: €{finalAmount:0.00}";
-                lblHeader.Location = new Point(20, 20);
-                lblHeader.Size = new Size(450, 25);
-                lblHeader.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-                lblHeader.TextAlign = ContentAlignment.MiddleCenter;
-                
-                // Create text boxes for each split amount
-                List<TextBox> amountTextBoxes = new List<TextBox>();
-                int yPosition = 60;
-                
-                for (int i = 0; i < GetNumberOfSplits(); i++)
-                {
-                    Label lblPerson = new Label();
-                    lblPerson.Text = $"Person {i + 1}:";
-                    lblPerson.Location = new Point(20, yPosition);
-                    lblPerson.Size = new Size(80, 25);
-                    lblPerson.TextAlign = ContentAlignment.MiddleLeft;
-                    
-                    TextBox txtAmount = new TextBox();
-                    txtAmount.Location = new Point(110, yPosition);
-                    txtAmount.Size = new Size(100, 25);
-                    txtAmount.TextAlign = HorizontalAlignment.Right;
-                    txtAmount.Text = currentInvoice.Payments.Count > i ? currentInvoice.Payments[i].Amount.ToString("0.00") : "0.00";
-                    
-                    Label lblEuro = new Label();
-                    lblEuro.Text = "€";
-                    lblEuro.Location = new Point(220, yPosition);
-                    lblEuro.Size = new Size(20, 25);
-                    lblEuro.TextAlign = ContentAlignment.MiddleLeft;
-                    
-                    customSplitDialog.Controls.Add(lblPerson);
-                    customSplitDialog.Controls.Add(txtAmount);
-                    customSplitDialog.Controls.Add(lblEuro);
-                    amountTextBoxes.Add(txtAmount);
-                    
-                    yPosition += 35;
-                }
-                
-                // Total display
-                Label lblTotal = new Label();
-                lblTotal.Location = new Point(20, yPosition + 10);
-                lblTotal.Size = new Size(220, 25);
-                lblTotal.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-                lblTotal.Text = "Total of amounts above: €0.00";
-                
-                // Update total when amounts change
-                EventHandler updateTotal = (s, e) =>
-                {
-                    decimal total = 0;
-                    foreach (TextBox tb in amountTextBoxes)
-                    {
-                        if (decimal.TryParse(tb.Text, out decimal amount))
-                        {
-                            total += amount;
-                        }
-                    }
-                    lblTotal.Text = $"Total of amounts above: €{total:0.00}";
-                    
-                    if (Math.Abs(total - finalAmount) < 0.01m)
-                    {
-                        lblTotal.ForeColor = Color.DarkGreen;
-                    }
-                    else
-                    {
-                        lblTotal.ForeColor = Color.Red;
-                    }
-                };
-                
-                // Attach event handlers
-                foreach (TextBox tb in amountTextBoxes)
-                {
-                    tb.TextChanged += updateTotal;
-                }
-                
-                customSplitDialog.Controls.Add(lblHeader);
-                customSplitDialog.Controls.Add(lblTotal);
-                
-                // Buttons
-                Button btnOK = new Button();
-                btnOK.Text = "OK";
-                btnOK.DialogResult = DialogResult.OK;
-                btnOK.Location = new Point(250, yPosition + 40);
-                btnOK.Size = new Size(80, 30);
-                
-                Button btnCancel = new Button();
-                btnCancel.Text = "Cancel";
-                btnCancel.DialogResult = DialogResult.Cancel;
-                btnCancel.Location = new Point(340, yPosition + 40);
-                btnCancel.Size = new Size(80, 30);
-                
-                Button btnEqualSplit = new Button();
-                btnEqualSplit.Text = "Equal Split";
-                btnEqualSplit.Location = new Point(250, yPosition + 10);
-                btnEqualSplit.Size = new Size(100, 25);
-                btnEqualSplit.BackColor = Color.LightBlue;
-                btnEqualSplit.Click += (s, e) =>
-                {
-                    decimal evenAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
-                    for (int i = 0; i < amountTextBoxes.Count; i++)
-                    {
-                        amountTextBoxes[i].Text = evenAmount.ToString("0.00");
-                    }
-                    // Adjust last amount for rounding
-                    if (amountTextBoxes.Count > 0)
-                    {
-                        decimal totalEven = evenAmount * GetNumberOfSplits();
-                        decimal difference = finalAmount - totalEven;
-                        decimal lastAmount = evenAmount + difference;
-                        amountTextBoxes[amountTextBoxes.Count - 1].Text = lastAmount.ToString("0.00");
-                    }
-                };
-                
-                customSplitDialog.Controls.Add(btnEqualSplit);
-                customSplitDialog.Controls.Add(btnOK);
-                customSplitDialog.Controls.Add(btnCancel);
-                
-                customSplitDialog.AcceptButton = btnOK;
-                customSplitDialog.CancelButton = btnCancel;
-                
-                // Trigger initial total calculation
-                updateTotal(this, EventArgs.Empty);
+                SetupCustomSplitDialogContent(customSplitDialog);
                 
                 if (customSplitDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Save the custom amounts to the invoice's payment collection
-                    currentInvoice.Payments.Clear();
-                    decimal totalEntered = 0;
-                    
-                    foreach (TextBox tb in amountTextBoxes)
-                    {
-                        decimal amount = 0;
-                        if (decimal.TryParse(tb.Text, out amount))
-                        {
-                            totalEntered += amount;
-                        }
-                        
-                        Payment splitPayment = new Payment
-                        {
-                            Amount = amount,
-                            InvoiceId = currentInvoice
-                        };
-                        currentInvoice.AddPayment(splitPayment);
-                    }
-                    
-                    // Validate total
-                    if (Math.Abs(totalEntered - finalAmount) >= 0.01m)
-                    {
-                        MessageBox.Show(
-                            $"The sum of individual amounts (€{totalEntered:0.00}) does not match the total bill amount (€{finalAmount:0.00}).\n\nPlease adjust the amounts so they add up correctly.",
-                            "Amount Mismatch",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                        
-                        // Don't save invalid amounts, show dialog again
-                        ShowCustomSplitDialog();
-                        return;
-                    }
-                    
-                    UpdateCustomSplitDisplay();
+                    ProcessCustomSplitDialogResult(customSplitDialog);
                 }
             }
+        }
+
+        private Form CreateCustomSplitDialog()
+        {
+            Form customSplitDialog = new Form();
+            customSplitDialog.Text = "Configure Custom Split Amounts";
+            customSplitDialog.Size = new Size(500, 400);
+            customSplitDialog.StartPosition = FormStartPosition.CenterParent;
+            customSplitDialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+            customSplitDialog.MaximizeBox = false;
+            customSplitDialog.MinimizeBox = false;
+            return customSplitDialog;
+        }
+
+        private void SetupCustomSplitDialogContent(Form customSplitDialog)
+        {
+            decimal finalAmount = GetFinalAmount();
+            
+            AddDialogHeader(customSplitDialog, finalAmount);
+            var amountTextBoxes = AddAmountInputs(customSplitDialog);
+            var lblTotal = AddTotalDisplay(customSplitDialog, amountTextBoxes.Count);
+            SetupTotalCalculation(amountTextBoxes, lblTotal, finalAmount);
+            AddCustomSplitDialogButtons(customSplitDialog, amountTextBoxes, finalAmount);
+        }
+
+        private void AddDialogHeader(Form customSplitDialog, decimal finalAmount)
+        {
+            Label lblHeader = new Label();
+            lblHeader.Text = $"Total Amount to Split: €{finalAmount:0.00}";
+            lblHeader.Location = new Point(20, 20);
+            lblHeader.Size = new Size(450, 25);
+            lblHeader.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            lblHeader.TextAlign = ContentAlignment.MiddleCenter;
+            customSplitDialog.Controls.Add(lblHeader);
+        }
+
+        private List<TextBox> AddAmountInputs(Form customSplitDialog)
+        {
+            List<TextBox> amountTextBoxes = new List<TextBox>();
+            int yPosition = 60;
+            
+            for (int i = 0; i < GetNumberOfSplits(); i++)
+            {
+                CreatePersonAmountInput(customSplitDialog, i, yPosition, amountTextBoxes);
+                yPosition += 35;
+            }
+            
+            return amountTextBoxes;
+        }
+
+        private void CreatePersonAmountInput(Form customSplitDialog, int personIndex, int yPosition, List<TextBox> amountTextBoxes)
+        {
+            Label lblPerson = CreatePersonLabel(personIndex, yPosition);
+            TextBox txtAmount = CreateAmountTextBox(personIndex, yPosition);
+            Label lblEuro = CreateEuroLabel(yPosition);
+            
+            customSplitDialog.Controls.AddRange(new Control[] { lblPerson, txtAmount, lblEuro });
+            amountTextBoxes.Add(txtAmount);
+        }
+
+        private Label CreatePersonLabel(int personIndex, int yPosition)
+        {
+            return new Label
+            {
+                Text = $"Person {personIndex + 1}:",
+                Location = new Point(20, yPosition),
+                Size = new Size(80, 25),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+        }
+
+        private TextBox CreateAmountTextBox(int personIndex, int yPosition)
+        {
+            return new TextBox
+            {
+                Location = new Point(110, yPosition),
+                Size = new Size(100, 25),
+                TextAlign = HorizontalAlignment.Right,
+                Text = GetInitialAmountText(personIndex)
+            };
+        }
+
+        private string GetInitialAmountText(int personIndex)
+        {
+            return currentInvoice.Payments.Count > personIndex 
+                ? currentInvoice.Payments[personIndex].Amount.ToString("0.00") 
+                : "0.00";
+        }
+
+        private Label CreateEuroLabel(int yPosition)
+        {
+            return new Label
+            {
+                Text = "€",
+                Location = new Point(220, yPosition),
+                Size = new Size(20, 25),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+        }
+
+        private Label AddTotalDisplay(Form customSplitDialog, int numberOfInputs)
+        {
+            int yPosition = 60 + (numberOfInputs * 35);
+            
+            Label lblTotal = new Label();
+            lblTotal.Location = new Point(20, yPosition + 10);
+            lblTotal.Size = new Size(220, 25);
+            lblTotal.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            lblTotal.Text = "Total of amounts above: €0.00";
+            
+            customSplitDialog.Controls.Add(lblTotal);
+            return lblTotal;
+        }
+
+        private void SetupTotalCalculation(List<TextBox> amountTextBoxes, Label lblTotal, decimal finalAmount)
+        {
+            EventHandler updateTotal = CreateUpdateTotalHandler(amountTextBoxes, lblTotal, finalAmount);
+            
+            foreach (TextBox tb in amountTextBoxes)
+            {
+                tb.TextChanged += updateTotal;
+            }
+            
+            updateTotal(this, EventArgs.Empty);
+        }
+
+        private EventHandler CreateUpdateTotalHandler(List<TextBox> amountTextBoxes, Label lblTotal, decimal finalAmount)
+        {
+            return (s, e) =>
+            {
+                decimal total = CalculateTotalFromTextBoxes(amountTextBoxes);
+                UpdateTotalLabel(lblTotal, total, finalAmount);
+            };
+        }
+
+        private decimal CalculateTotalFromTextBoxes(List<TextBox> amountTextBoxes)
+        {
+            decimal total = 0;
+            foreach (TextBox tb in amountTextBoxes)
+            {
+                if (decimal.TryParse(tb.Text, out decimal amount))
+                {
+                    total += amount;
+                }
+            }
+            return total;
+        }
+
+        private void UpdateTotalLabel(Label lblTotal, decimal total, decimal finalAmount)
+        {
+            lblTotal.Text = $"Total of amounts above: €{total:0.00}";
+            lblTotal.ForeColor = Math.Abs(total - finalAmount) < 0.01m ? Color.DarkGreen : Color.Red;
+        }
+
+        private void AddCustomSplitDialogButtons(Form customSplitDialog, List<TextBox> amountTextBoxes, decimal finalAmount)
+        {
+            int yPosition = 60 + (amountTextBoxes.Count * 35);
+            
+            Button btnEqualSplit = CreateEqualSplitButton(yPosition, amountTextBoxes, finalAmount);
+            Button btnOK = CreateOKButton(yPosition);
+            Button btnCancel = CreateCancelButton(yPosition);
+            
+            customSplitDialog.Controls.AddRange(new Control[] { btnEqualSplit, btnOK, btnCancel });
+            customSplitDialog.AcceptButton = btnOK;
+            customSplitDialog.CancelButton = btnCancel;
+        }
+
+        private Button CreateEqualSplitButton(int yPosition, List<TextBox> amountTextBoxes, decimal finalAmount)
+        {
+            Button btnEqualSplit = new Button();
+            btnEqualSplit.Text = "Equal Split";
+            btnEqualSplit.Location = new Point(250, yPosition + 10);
+            btnEqualSplit.Size = new Size(100, 25);
+            btnEqualSplit.BackColor = Color.LightBlue;
+            btnEqualSplit.Click += (s, e) => FillEqualSplitAmounts(amountTextBoxes, finalAmount);
+            return btnEqualSplit;
+        }
+
+        private void FillEqualSplitAmounts(List<TextBox> amountTextBoxes, decimal finalAmount)
+        {
+            decimal evenAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
+            
+            FillTextBoxesWithEvenAmount(amountTextBoxes, evenAmount);
+            AdjustLastAmountForRounding(amountTextBoxes, evenAmount, finalAmount);
+        }
+
+        private void FillTextBoxesWithEvenAmount(List<TextBox> amountTextBoxes, decimal evenAmount)
+        {
+            for (int i = 0; i < amountTextBoxes.Count; i++)
+            {
+                amountTextBoxes[i].Text = evenAmount.ToString("0.00");
+            }
+        }
+
+        private void AdjustLastAmountForRounding(List<TextBox> amountTextBoxes, decimal evenAmount, decimal finalAmount)
+        {
+            if (amountTextBoxes.Count > 0)
+            {
+                decimal totalEven = evenAmount * GetNumberOfSplits();
+                decimal difference = finalAmount - totalEven;
+                decimal lastAmount = evenAmount + difference;
+                amountTextBoxes[amountTextBoxes.Count - 1].Text = lastAmount.ToString("0.00");
+            }
+        }
+
+        private Button CreateOKButton(int yPosition)
+        {
+            return new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new Point(250, yPosition + 40),
+                Size = new Size(80, 30)
+            };
+        }
+
+        private Button CreateCancelButton(int yPosition)
+        {
+            return new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Location = new Point(340, yPosition + 40),
+                Size = new Size(80, 30)
+            };
+        }
+
+        private void ProcessCustomSplitDialogResult(Form customSplitDialog)
+        {
+            var amountTextBoxes = customSplitDialog.Controls.OfType<TextBox>().ToList();
+            
+            SaveCustomAmounts(amountTextBoxes);
+            
+            if (!ValidateCustomAmountsTotal(amountTextBoxes))
+            {
+                ShowCustomSplitDialog(); // Show dialog again for correction
+                return;
+            }
+            
+            UpdateCustomSplitDisplay();
+        }
+
+        private void SaveCustomAmounts(List<TextBox> amountTextBoxes)
+        {
+            currentInvoice.Payments.Clear();
+            
+            foreach (TextBox tb in amountTextBoxes)
+            {
+                decimal amount = decimal.TryParse(tb.Text, out decimal parsedAmount) ? parsedAmount : 0;
+                AddCustomSplitPayment(amount);
+            }
+        }
+
+        private void AddCustomSplitPayment(decimal amount)
+        {
+            Payment splitPayment = new Payment
+            {
+                Amount = amount,
+                InvoiceId = currentInvoice
+            };
+            currentInvoice.AddPayment(splitPayment);
+        }
+
+        private bool ValidateCustomAmountsTotal(List<TextBox> amountTextBoxes)
+        {
+            decimal totalEntered = CalculateTotalFromTextBoxes(amountTextBoxes);
+            decimal finalAmount = GetFinalAmount();
+            
+            if (Math.Abs(totalEntered - finalAmount) >= 0.01m)
+            {
+                ShowCustomAmountValidationError(totalEntered, finalAmount);
+                return false;
+            }
+            return true;
+        }
+
+        private void ShowCustomAmountValidationError(decimal totalEntered, decimal finalAmount)
+        {
+            MessageBox.Show(
+                $"The sum of individual amounts (€{totalEntered:0.00}) does not match the total bill amount (€{finalAmount:0.00}).\n\nPlease adjust the amounts so they add up correctly.",
+                "Amount Mismatch",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
         }
     }
 }
