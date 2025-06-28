@@ -21,9 +21,6 @@ namespace ChapeauG5
         // Main invoice object that contains all payment-related data including payments list
         private Invoice currentInvoice;
         private Order currentOrder;
-        
-        // Split payment tracking - now using the invoice's payment collection
-        private int currentSplitIndex = 0;
 
         public PaymentForm(int orderId, Employee employee)
         {
@@ -336,14 +333,13 @@ namespace ChapeauG5
             // Confirm payment
             DialogResult result = MessageBox.Show(
                 $"Process payment of €{finalAmount:0.00} using {paymentMethod}?",
-
                 "Confirm Payment",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
             
             if (result == DialogResult.Yes)
             {
-                // Create the payment and add it to the invoice
+                // Prepare the complete invoice with payment in memory first
                 Payment payment = new Payment
                 {
                     PaymentMethod = paymentMethod,
@@ -354,36 +350,25 @@ namespace ChapeauG5
                 
                 currentInvoice.AddPayment(payment);
                 
-                // Create invoice in database
-                int invoiceId = paymentService.CreateInvoice(
-                    orderId, 
-                    currentInvoice.TotalAmount, 
-                    currentInvoice.TotalVat, 
-                    currentInvoice.LowVatAmount, 
-                    currentInvoice.HighVatAmount, 
-                    currentInvoice.TotalExcludingVat, 
-                    currentInvoice.TotalTipAmount);
-                
-                // Update the invoice ID
-                currentInvoice.InvoiceId = invoiceId;
-                payment.InvoiceId = currentInvoice;
-                
-                // Process the payment
-                int paymentId = paymentService.ProcessPayment(
-                    invoiceId, 
-                    payment.PaymentMethod, 
-                    payment.Amount, 
-                    payment.Feedback, 
-                    payment.FeedbackType);
-                
-                MessageBox.Show(
-                    "Payment processed successfully!",
-                    "Payment Complete",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                
-                this.DialogResult = DialogResult.OK;
-                this.Close();
+                // Now store everything to database at once
+                try
+                {
+                    paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
+                    
+                    MessageBox.Show(
+                        "Payment processed successfully!",
+                        "Payment Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving payment: {ex.Message}", 
+                        "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -415,71 +400,86 @@ namespace ChapeauG5
                 }
             }
             
-            // Create invoice in database first
-            int invoiceId = paymentService.CreateInvoice(
-                orderId, 
-                currentInvoice.TotalAmount, 
-                currentInvoice.TotalVat, 
-                currentInvoice.LowVatAmount, 
-                currentInvoice.HighVatAmount, 
-                currentInvoice.TotalExcludingVat, 
-                currentInvoice.TotalTipAmount);
+            // Prepare all payments first before saving to database
+            List<Payment> allPayments = PrepareAllSplitPayments();
             
-            // Update the invoice ID
-            currentInvoice.InvoiceId = invoiceId;
-            
-            // Reset split tracking
-            currentSplitIndex = 0;
-            
-            // Show split payment dialog for each split
-            if (IsCustomSplit())
+            if (allPayments != null && allPayments.Count > 0)
             {
-                ProcessNextCustomSplitPayment(invoiceId);
+                // Clear existing payments and add the complete list
+                currentInvoice.Payments.Clear();
+                foreach (Payment payment in allPayments)
+                {
+                    currentInvoice.AddPayment(payment);
+                }
+                
+                // Now store the complete invoice with all payments to database
+                try
+                {
+                    paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
+                    
+                    ShowPaymentSummary();
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving split payments: {ex.Message}", 
+                        "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             else
             {
-                ProcessNextEqualSplitPayment(invoiceId);
+                MessageBox.Show("Payment process was canceled.", 
+                    "Payment Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
-        private void ProcessNextEqualSplitPayment(int invoiceId)
+        private List<Payment> PrepareAllSplitPayments()
         {
-            currentSplitIndex++;
-            
-            if (currentSplitIndex > GetNumberOfSplits())
-            {
-                FinalizeSplitPayment();
-                return;
-            }
-            
-            // Calculate split amounts
+            List<Payment> payments = new List<Payment>();
+            int numberOfSplits = GetNumberOfSplits();
             decimal finalAmount = GetFinalAmount();
-            decimal splitAmount = decimal.Round(finalAmount / GetNumberOfSplits(), 2);
-            decimal lastSplitAmount = finalAmount - (splitAmount * (GetNumberOfSplits() - 1));
-            decimal amountToPay = (currentSplitIndex == GetNumberOfSplits()) ? lastSplitAmount : splitAmount;
-
-            ShowSplitPaymentDialog(invoiceId, amountToPay, () => ProcessNextEqualSplitPayment(invoiceId));
-        }
-
-        private void ProcessNextCustomSplitPayment(int invoiceId)
-        {
-            currentSplitIndex++;
             
-            if (currentSplitIndex > GetNumberOfSplits())
+            // Use while loop instead of recursive method calls
+            int currentPaymentIndex = 0;
+            while (currentPaymentIndex < numberOfSplits)
             {
-                FinalizeSplitPayment();
-                return;
+                decimal amountToPay;
+                
+                if (IsCustomSplit())
+                {
+                    // Use custom split amounts
+                    amountToPay = currentInvoice.Payments[currentPaymentIndex].Amount;
+                }
+                else
+                {
+                    // Calculate equal split amounts
+                    decimal splitAmount = decimal.Round(finalAmount / numberOfSplits, 2);
+                    decimal lastSplitAmount = finalAmount - (splitAmount * (numberOfSplits - 1));
+                    amountToPay = (currentPaymentIndex == numberOfSplits - 1) ? lastSplitAmount : splitAmount;
+                }
+                
+                // Show payment dialog for this split
+                Payment splitPayment = CollectSplitPaymentInfo(currentPaymentIndex + 1, numberOfSplits, amountToPay);
+                
+                if (splitPayment == null)
+                {
+                    // User canceled - return null to indicate cancellation
+                    return null;
+                }
+                
+                payments.Add(splitPayment);
+                currentPaymentIndex++;
             }
             
-            decimal amountToPay = currentInvoice.Payments[currentSplitIndex - 1].Amount;
-            ShowSplitPaymentDialog(invoiceId, amountToPay, () => ProcessNextCustomSplitPayment(invoiceId));
+            return payments;
         }
 
-        private void ShowSplitPaymentDialog(int invoiceId, decimal amountToPay, Action nextAction)
+        private Payment CollectSplitPaymentInfo(int paymentNumber, int totalPayments, decimal amountToPay)
         {
             using (Form paymentDialog = new Form())
             {
-                paymentDialog.Text = $"Payment {currentSplitIndex} of {GetNumberOfSplits()}";
+                paymentDialog.Text = $"Payment {paymentNumber} of {totalPayments}";
                 paymentDialog.Size = new Size(400, 350);
                 paymentDialog.StartPosition = FormStartPosition.CenterParent;
                 paymentDialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -508,49 +508,20 @@ namespace ChapeauG5
                     FeedbackType splitFeedbackType = (FeedbackType)selectedFeedbackType.Value;
                     string splitFeedback = txtSplitFeedback.Text;
                     
-                    // Process the payment
-                    bool isLastPayment = currentSplitIndex == GetNumberOfSplits();
-                    int paymentId = paymentService.ProcessPayment(
-                        invoiceId, 
-                        paymentMethod, 
-                        amountToPay, 
-                        splitFeedback, 
-                        splitFeedbackType,
-                        isLastPayment); // Mark order as done only on last payment
-                    
-                    // Update the payment in the invoice's payment collection
-                    Payment splitPayment = new Payment
+                    // Create and return the payment object
+                    return new Payment
                     {
-                        PaymentId = paymentId,
                         PaymentMethod = paymentMethod,
                         Amount = amountToPay,
                         Feedback = splitFeedback,
                         FeedbackType = splitFeedbackType,
                         InvoiceId = currentInvoice
                     };
-                    
-                    // Update the payment in the collection
-                    if (IsCustomSplit() && currentSplitIndex <= currentInvoice.Payments.Count)
-                    {
-                        // Update existing payment in custom split
-                        currentInvoice.Payments[currentSplitIndex - 1] = splitPayment;
-                    }
-                    else
-                    {
-                        // Add new payment for equal split
-                        currentInvoice.AddPayment(splitPayment);
-                    }
-                    
-                    // Process the next split
-                    nextAction();
                 }
                 else
                 {
                     // User canceled
-                    MessageBox.Show("Payment process was canceled.", 
-                        "Payment Canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    this.DialogResult = DialogResult.Cancel;
-                    this.Close();
+                    return null;
                 }
             }
         }
@@ -668,7 +639,7 @@ namespace ChapeauG5
             return controls;
         }
 
-        private void FinalizeSplitPayment()
+        private void ShowPaymentSummary()
         {
             // Show a summary of the payments using the invoice's payment collection
             StringBuilder summary = new StringBuilder();
@@ -692,8 +663,6 @@ namespace ChapeauG5
             summary.AppendLine($"Status: {(currentInvoice.IsFullyPaid() ? "FULLY PAID" : "PARTIALLY PAID")}");
             
             MessageBox.Show(summary.ToString(), "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            this.DialogResult = DialogResult.OK;
-            this.Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)

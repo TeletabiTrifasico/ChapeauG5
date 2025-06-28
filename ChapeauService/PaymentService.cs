@@ -59,7 +59,33 @@ namespace ChapeauService
             return (totalExVat, lowVatAmount, highVatAmount, totalWithVat);
         }
 
-        // Create an invoice for an order
+        // NEW METHOD: Process complete invoice with all payments at once
+        public void ProcessCompleteInvoice(Invoice invoice, int orderId)
+        {
+            // First create the invoice in the database
+            int invoiceId = invoiceDao.CreateInvoice(invoice);
+            
+            // Update the invoice ID in our object
+            invoice.InvoiceId = invoiceId;
+            
+            // Process all payments for this invoice
+            foreach (Payment payment in invoice.Payments)
+            {
+                // Ensure payment is linked to the correct invoice
+                payment.InvoiceId = invoice;
+                
+                // Create each payment in the database
+                int paymentId = paymentDao.CreatePayment(payment);
+                
+                // Update the payment ID in our object
+                payment.PaymentId = paymentId;
+            }
+            
+            // Finally, mark the order as done
+            orderDao.MarkOrderAsDone(orderId);
+        }
+
+        // Keep existing methods for backward compatibility if needed
         public int CreateInvoice(int orderId, decimal totalAmount, decimal totalVat, 
                                decimal lowVatAmount, decimal highVatAmount, 
                                decimal totalExcludingVat, decimal tipAmount)
@@ -69,7 +95,6 @@ namespace ChapeauService
                 OrderId = new Order { OrderId = orderId },
                 TotalAmount = totalAmount,
                 TotalVat = totalVat,
-                // Store the calculated VAT values for reference
                 LowVatAmount = lowVatAmount,
                 HighVatAmount = highVatAmount,
                 TotalExcludingVat = totalExcludingVat,
