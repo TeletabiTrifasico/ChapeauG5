@@ -12,30 +12,28 @@ namespace ChapeauG5
     {
         private OrderService orderService;
         private TableService tableService;
-        private Employee loggedInEmployee;
+        private Employee loggedInEmployee; // Pass this one to ctor
         private List<Button> tableButtons;
 
+        //ctor
         public TableView(Employee employee)
         {
             InitializeComponent();
+            RefreshTables();
 
-            if (employee == null)
-            {
-                MessageBox.Show("Employee is null in TableView constructor!");
-            }
-
-            loggedInEmployee = employee ?? throw new ArgumentNullException(nameof(employee));
             tableService = new TableService();
             orderService = new OrderService();
             tableButtons = new List<Button>();
 
-            lblWelcome.Text = $"Welcome, {employee.FirstName}!";
+            if (employee == null)
+            {
+                throw new ArgumentNullException(nameof(employee));
+            }
+            loggedInEmployee = employee;
+
+            lblWelcome.Text = $"Welcome, {loggedInEmployee.FirstName}!";
         }
 
-        private void TableView_Load(object sender, EventArgs e)
-        {
-            RefreshTables();
-        }
 
         private void RefreshTables()
         {
@@ -102,12 +100,20 @@ namespace ChapeauG5
 
         private Color GetTableButtonColor(TableStatus status)
         {
-            return status switch
+            try
             {
-                TableStatus.Free => Color.LightGreen,
-                TableStatus.Occupied => Color.LightCoral,
-                _ => SystemColors.Control
-            };
+                return status switch
+                {
+                    TableStatus.Free => Color.LightGreen,
+                    TableStatus.Occupied => Color.LightCoral,
+                    _ => SystemColors.Control
+                };
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error getting table button color: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return SystemColors.Control;
+            }
         }
 
         private void BtnTable_Click(object sender, EventArgs e)
@@ -164,18 +170,6 @@ namespace ChapeauG5
             loginForm.ClearCredentials();
             loginForm.Show();
             this.Hide();
-        }
-
-        private Image GetRefreshIcon()
-        {
-            try
-            {
-                return SystemIcons.Information.ToBitmap();
-            }
-            catch
-            {
-                return null;
-            }
         }
     }
 }

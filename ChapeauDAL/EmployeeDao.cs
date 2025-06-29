@@ -15,7 +15,7 @@ namespace ChapeauDAL
             var parameters = new SqlParameter[] {
                 new SqlParameter("@Username", username)
             };
-            
+            // ExecuteQuerySingleAsync is a method in BaseDao that executes a query and maps the result to an Employee object
             return await ExecuteQuerySingleAsync(query, ReadEmployee, parameters);
         }
 
@@ -30,7 +30,8 @@ namespace ChapeauDAL
             return await ExecuteQuerySingleAsync(query, ReadEmployee, parameters);
         }
 
-        // Helper method to read employee data from SqlDataReader
+        //This is mapping. It takes a SqlDataReader and maps it to an Employee object.
+        //mapping = reading data from the database and converting it to an object
         private Employee ReadEmployee(SqlDataReader reader)
         {
             Employee employee = new Employee

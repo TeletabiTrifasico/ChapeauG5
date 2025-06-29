@@ -10,7 +10,7 @@ namespace ChapeauDAL
     {
         public List<Table> GetAllTables()
         {
-            string query = "SELECT * FROM [Table] ORDER BY table_number";
+            string query = "SELECT * FROM [Table] ORDER BY table_id";
             DataTable dataTable = ExecuteSelectQuery(query, null);
             
             List<Table> tables = new List<Table>();

@@ -38,25 +38,25 @@
             // 
             // freeTablebtn
             // 
+            freeTablebtn.BackColor = Color.LightGreen;
             freeTablebtn.Location = new Point(404, 126);
             freeTablebtn.Name = "freeTablebtn";
             freeTablebtn.Size = new Size(390, 142);
             freeTablebtn.TabIndex = 0;
             freeTablebtn.Text = "Free Table";
-            freeTablebtn.UseVisualStyleBackColor = true;
+            freeTablebtn.UseVisualStyleBackColor = false;
             freeTablebtn.Click += freeTablebtn_Click;
-            freeTablebtn.BackColor = Color.LightGreen;
             // 
             // takeOrderbtn
             // 
+            takeOrderbtn.BackColor = Color.LightBlue;
             takeOrderbtn.Location = new Point(404, 325);
             takeOrderbtn.Name = "takeOrderbtn";
             takeOrderbtn.Size = new Size(390, 142);
             takeOrderbtn.TabIndex = 1;
             takeOrderbtn.Text = "Take Order";
-            takeOrderbtn.UseVisualStyleBackColor = true;
+            takeOrderbtn.UseVisualStyleBackColor = false;
             takeOrderbtn.Click += takeOrderbtn_Click;
-            takeOrderbtn.BackColor = Color.LightBlue;
             // 
             // lbltabelNumber
             // 
@@ -69,14 +69,14 @@
             // 
             // setAsServedBtn
             // 
+            setAsServedBtn.BackColor = Color.Coral;
             setAsServedBtn.Location = new Point(404, 509);
             setAsServedBtn.Name = "setAsServedBtn";
             setAsServedBtn.Size = new Size(390, 142);
             setAsServedBtn.TabIndex = 3;
             setAsServedBtn.Text = "Set as Served";
-            setAsServedBtn.UseVisualStyleBackColor = true;
+            setAsServedBtn.UseVisualStyleBackColor = false;
             setAsServedBtn.Click += setAsServedBtn_Click;
-            setAsServedBtn.BackColor = Color.Coral;
             // 
             // lvReadyToBeServedItems
             // 
@@ -86,10 +86,6 @@
             lvReadyToBeServedItems.TabIndex = 4;
             lvReadyToBeServedItems.UseCompatibleStateImageBehavior = false;
             lvReadyToBeServedItems.View = View.Details;
-
-            lvReadyToBeServedItems.Columns.Add("Name", 150);
-            lvReadyToBeServedItems.Columns.Add("Quantity", 150);
-            lvReadyToBeServedItems.Columns.Add("Status", 150);
             // 
             // label1
             // 
