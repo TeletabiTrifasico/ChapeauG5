@@ -1,6 +1,7 @@
-using System;
+using Sysyem;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ChapeauModel;
 using ChapeauService;
@@ -10,169 +11,124 @@ namespace ChapeauG5
     public partial class LoginForm : Form
     {
         private AuthenticationService authService;
-        
+
         public LoginForm()
         {
             InitializeComponent();
             authService = new AuthenticationService();
             LoadLogoImage();
         }
-        
+
         private void LoadLogoImage()
         {
-            try
+            string[] possiblePaths = new string[]
             {
-                // Try multiple locations in order of preference
-                string[] possiblePaths = new string[]
-                {
-                    // 1. Look in the output directory (where the exe runs)
-                    "logo.png",
-                    Path.Combine(Application.StartupPath, "logo.png"),
-                    
-                    // 2. Look relative to the output directory
-                    Path.Combine("..", "logo.png"),
-                    
-                    // 3. Look in the project root directory (for development)
-                    Path.Combine("..", "..", "..", "logo.png"),
-                    Path.Combine("..", "..", "..", "..", "logo.png"),
-                    
-                    // 4. Fallback to GitHub URL (if internet is available)
-                    "https://raw.githubusercontent.com/TeletabiTrifasico/ChapeauG5/Hugo/logo.png"
-                };
+                "logo.png",
+                Path.Combine(Application.StartupPath, "logo.png"),
+                Path.Combine("..", "logo.png"),
+                Path.Combine("..", "..", "..", "logo.png"),
+                Path.Combine("..", "..", "..", "..", "logo.png"),
+                "https://raw.githubusercontent.com/TeletabiTrifasico/ChapeauG5/Hugo/logo.png"
+            };
 
-                // Try each path until we find the image
-                foreach (string path in possiblePaths)
+            foreach (string path in possiblePaths)
+            {
+                try
                 {
-                    try
+                    if (path.StartsWith("http"))
                     {
-                        if (path.StartsWith("http"))
+                        using (var webClient = new System.Net.WebClient())
                         {
-                            // Download from URL
-                            using (var webClient = new System.Net.WebClient())
+                            byte[] data = webClient.DownloadData(path);
+                            using (var ms = new MemoryStream(data))
                             {
-                                byte[] data = webClient.DownloadData(path);
-                                using (var ms = new MemoryStream(data))
-                                {
-                                    pictureBoxLogo.Image = Image.FromStream(ms);
-                                    Console.WriteLine($"Logo loaded from URL: {path}");
-                                    return;
-                                }
+                                pictureBoxLogo.Image = Image.FromStream(ms);
+                                return;
                             }
                         }
-                        else if (File.Exists(path))
-                        {
-                            // Load from file system
-                            pictureBoxLogo.Image = Image.FromFile(path);
-                            Console.WriteLine($"Logo loaded from: {path}");
-                            return;
-                        }
                     }
-                    catch
+                    else if (File.Exists(path))
                     {
-                        // Continue to the next path if this one fails
-                        continue;
+                        pictureBoxLogo.Image = Image.FromFile(path);
+                        return;
                     }
                 }
-
-                // If we get here, we couldn't find the logo in any location
-                Console.WriteLine("Could not find logo image in any standard location");
+                catch
+                {
+                    // Try the other way
+                    continue;
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading logo: {ex.Message}");
-            }
+            // If no logo is found, set a default image or leave it blank
+            Console.WriteLine("Logo not found");
         }
-        
+
         private async void btnLogin_Click(object sender, EventArgs e)
+        {
+            await LoginAsync();
+        }
+
+        private async Task LoginAsync()
         {
             try
             {
-                // Disable login button to prevent multiple clicks
                 btnLogin.Enabled = false;
-                
-                // Show a loading indicator
-                lblError.Text = "Logging in...";
-                lblError.ForeColor = Color.Blue;
-                
-                // Validate input
+                ShowStatus("Logging in...", Color.Blue);
+
                 if (string.IsNullOrWhiteSpace(txtUsername.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
                 {
-                    lblError.Text = "Please enter both username and password.";
-                    lblError.ForeColor = Color.Red;
+                    ShowStatus("Please enter both username and password.", Color.Red);
                     return;
                 }
-                
-                // Use the async version with a timeout
+
                 var loginTask = authService.LoginAsync(txtUsername.Text, txtPassword.Text);
-                
-                // Add timeout to prevent indefinite freezing
-                var timeoutTask = Task.Delay(20000); // 10 second timeout
-                
+                var timeoutTask = Task.Delay(20000);
+
                 if (await Task.WhenAny(loginTask, timeoutTask) == timeoutTask)
                 {
-                    lblError.Text = "Login timed out. Check your database connection.";
-                    lblError.ForeColor = Color.Red;
+                    ShowStatus("Login timed out. Check your database connection.", Color.Red);
                     return;
                 }
-                
-                // Get the result after we know the task completed
+
                 Employee loggedInEmployee = await loginTask;
-                
-                // If we get here, login was successful
                 ChapeauApp.LoggedInUser = loggedInEmployee;
-                
-                lblError.Text = ""; // Clear any error message
-                
-                // Open the appropriate form based on employee role
+                ShowStatus("", Color.Black);
+
                 OpenAppropriateForm(loggedInEmployee.Role);
-                
-                // Hide the login form
                 this.Hide();
             }
             catch (Exception ex)
             {
-                // Show errors on the label but if needed this can be changed to a popup
-                lblError.Text = ex.Message;
-                lblError.ForeColor = Color.Red;
+                ShowStatus(ex.Message, Color.Red);
             }
             finally
             {
-                // Always re-enables the button
                 btnLogin.Enabled = true;
             }
         }
-        
+
         private void OpenAppropriateForm(EmployeeRole role)
         {
-            // Here is where we change forms based on role
-
             Form formToShow;
-            
             switch (role)
             {
                 case EmployeeRole.Waiter:
                     formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
-                /*
-                case EmployeeRole.Bar:
-                    formToShow = new BarDashboardForm(); // Create this form
-                    break;
-                case EmployeeRole.Kitchen:
-                    formToShow = new KitchenDashboardForm(); // Create this form
-                    break;
-                case EmployeeRole.Manager:
-                    formToShow = new ManagerDashboardForm(); // Create this form
-                    break;
-                */
+                // Di?er roller eklenebilir
                 default:
                     formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
             }
-            
-            // Set the form's start position and size
             formToShow.StartPosition = FormStartPosition.CenterScreen;
             formToShow.FormClosed += (s, args) => this.Close();
             formToShow.Show();
+        }
+
+        private void ShowStatus(string message, Color color)
+        {
+            lblError.Text = message;
+            lblError.ForeColor = color;
         }
 
         public void ClearCredentials()

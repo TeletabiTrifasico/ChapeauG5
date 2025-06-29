@@ -14,7 +14,7 @@ namespace ChapeauG5
         private TableService tableService;
         private Employee loggedInEmployee;
         private List<Button> tableButtons;
-        
+
         public TableView(Employee employee)
         {
             InitializeComponent();
@@ -24,136 +24,111 @@ namespace ChapeauG5
                 MessageBox.Show("Employee is null in TableView constructor!");
             }
 
-            loggedInEmployee = employee;
-           
-
+            loggedInEmployee = employee ?? throw new ArgumentNullException(nameof(employee));
             tableService = new TableService();
-            tableButtons = new List<Button>();
             orderService = new OrderService();
+            tableButtons = new List<Button>();
 
             lblWelcome.Text = $"Welcome, {employee.FirstName}!";
         }
-        
+
         private void TableView_Load(object sender, EventArgs e)
         {
             RefreshTables();
         }
-        
+
         private void RefreshTables()
         {
             tlpTables.Controls.Clear();
             tableButtons.Clear();
-            
+
             List<Table> tables = tableService.GetAllTables();
             List<TableOrderStatus> tableOrderStatuses = orderService.GetTableOrderStatuses();
 
-            // Calculate positions to create a 5x2 grid
-            int maxTables = Math.Min(tables.Count, 10); // Maximum of 10 tables in a 5x2 grid
-            
+            int maxTables = Math.Min(tables.Count, 10);
+
             for (int i = 0; i < maxTables; i++)
             {
                 Table table = tables[i];
-                
-                Button btnTable = new Button();
-                btnTable.Text = $"Table {table.TableNumber}";
-                btnTable.Size = new Size(200, 200); // Adjust size for better visibility
-                btnTable.Tag = table;
+                TableOrderStatus status = tableOrderStatuses.Find(s => s.TableId == table.TableId);
 
-                
-                // Use Anchor instead of Dock for centering
-                btnTable.Dock = DockStyle.None;
-                btnTable.Anchor = AnchorStyles.None; // This centers the button in its cell
-                btnTable.FlatStyle = FlatStyle.Flat; // Keep flat styleyle
-                btnTable.FlatAppearance.BorderSize = 0; // Remove border completelyy
-                
-                // Style the button based on the table status
-                if (table.Status == TableStatus.Free)
-                {
-                    btnTable.BackColor = Color.LightGreen;
-                    btnTable.Text += "\nStatus: Free";
-                    // No border color needed since border size is 0
-                }
-                else if (table.Status == TableStatus.Occupied)
-                {
-                    btnTable.BackColor = Color.LightCoral;
-                    // No border color needed since border size is 0
-
-                    TableOrderStatus status = tableOrderStatuses.Find(s => s.TableId == table.TableId);
-
-
-                    if (status != null && status.HasRunningOrder)
-                    {
-                        string foodStatus = status.FoodOrderStatus ?? "-";
-                        string drinkStatus = status.DrinkOrderStatus ?? "-";
-                        btnTable.Text += $"\nFood: {foodStatus}\nDrink: {drinkStatus}";
-                    }
-                    else
-                    {
-                        btnTable.Text += "\nNo active order";
-                    }
-                }
-
-
+                Button btnTable = CreateTableButton(table, status);
                 btnTable.Click += BtnTable_Click;
                 tableButtons.Add(btnTable);
-                
-                // Calculate row and column for the 5x2 grid
+
                 int row = i / 5;
                 int col = i % 5;
-                
                 tlpTables.Controls.Add(btnTable, col, row);
             }
         }
-        
-        // Add this check before trying to instantiate OrderView
-        private bool IsOrderViewImplemented()
+
+        private Button CreateTableButton(Table table, TableOrderStatus status)
         {
-            // Check if the OrderView type exists and can be instantiated
-            try
+            var btnTable = new Button
             {
-                Type orderViewType = typeof(OrderView);
-                return true;
-            }
-            catch
+                Text = GetTableButtonText(table, status),
+                Size = new Size(200, 200),
+                Tag = table,
+                Dock = DockStyle.None,
+                Anchor = AnchorStyles.None,
+                FlatStyle = FlatStyle.Flat,
+            };
+            btnTable.FlatAppearance.BorderSize = 0;
+            btnTable.BackColor = GetTableButtonColor(table.Status);
+            return btnTable;
+        }
+
+        private string GetTableButtonText(Table table, TableOrderStatus status)
+        {
+            if (table.Status == TableStatus.Free)
             {
-                return false;
+                return $"Table {table.TableNumber}\nStatus: Free";
             }
+            else if (table.Status == TableStatus.Occupied)
+            {
+                string foodStatus = status?.FoodOrderStatus ?? "-";
+                string drinkStatus = status?.DrinkOrderStatus ?? "-";
+                if (status != null && status.HasRunningOrder)
+                {
+                    return $"Table {table.TableNumber}\nFood: {foodStatus}\nDrink: {drinkStatus}";
+                }
+                else
+                {
+                    return $"Table {table.TableNumber}\nNo active order";
+                }
+            }
+            return $"Table {table.TableNumber}\nStatus: Unknown";
+        }
+
+        private Color GetTableButtonColor(TableStatus status)
+        {
+            return status switch
+            {
+                TableStatus.Free => Color.LightGreen,
+                TableStatus.Occupied => Color.LightCoral,
+                _ => SystemColors.Control
+            };
         }
 
         private void BtnTable_Click(object sender, EventArgs e)
         {
             try
             {
-                Button clickedButton = (Button)sender;
-                Table selectedTable = (Table)clickedButton.Tag;
+                if (sender is not Button clickedButton || clickedButton.Tag is not Table selectedTable)
+                    return;
 
-                // Order status of the table
                 TableOrderStatus status = orderService.GetTableOrderStatuses()
                     .Find(s => s.TableId == selectedTable.TableId);
 
-                bool hasOpenOrder = status != null && status.HasRunningOrder; // is_done == false
+                bool hasOpenOrder = status != null && status.HasRunningOrder;
 
                 if (selectedTable.Status == TableStatus.Free)
                 {
-                    // Open FreeTableManagement, Occcupt button active
-                    var freeForm = new FreeTableManagement(selectedTable);
-                    freeForm.ShowDialog();
-
-                    RefreshTables(); // Refresh the table view after closing the form
+                    ShowFreeTableManagement(selectedTable);
                 }
                 else if (selectedTable.Status == TableStatus.Occupied)
                 {
-                    var occupiedForm = new OccupiedTableManagement(loggedInEmployee,selectedTable);
-
-                    // Take Order button
-                    occupiedForm.SetTakeOrderButtonEnabled(true);
-
-                    // Free Table butonu durumu
-                    occupiedForm.SetFreeTableButtonEnabled(!hasOpenOrder);
-                    // if (hasOpenOrder=true), freeTable button is going to be disabled 
-
-                    occupiedForm.FormClosed += (s, args) => RefreshTables();
-                    occupiedForm.ShowDialog();
+                    ShowOccupiedTableManagement(selectedTable, hasOpenOrder);
                 }
                 else
                 {
@@ -167,6 +142,22 @@ namespace ChapeauG5
             }
         }
 
+        private void ShowFreeTableManagement(Table table)
+        {
+            using var freeForm = new FreeTableManagement(table);
+            freeForm.ShowDialog();
+            RefreshTables();
+        }
+
+        private void ShowOccupiedTableManagement(Table table, bool hasOpenOrder)
+        {
+            using var occupiedForm = new OccupiedTableManagement(loggedInEmployee, table);
+            occupiedForm.SetTakeOrderButtonEnabled(true);
+            occupiedForm.SetFreeTableButtonEnabled(!hasOpenOrder);
+            occupiedForm.FormClosed += (s, args) => RefreshTables();
+            occupiedForm.ShowDialog();
+        }
+
         private void btnLogout_Click(object sender, EventArgs e)
         {
             var loginForm = new LoginForm();
@@ -174,18 +165,15 @@ namespace ChapeauG5
             loginForm.Show();
             this.Hide();
         }
-        
+
         private Image GetRefreshIcon()
         {
-            // Use a system icon or a custom one if available
             try
             {
-                // Try to use a standard system icon
                 return SystemIcons.Information.ToBitmap();
             }
             catch
             {
-                // Return null if icon can't be loaded
                 return null;
             }
         }

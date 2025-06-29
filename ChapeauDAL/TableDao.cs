@@ -41,7 +41,7 @@ namespace ChapeauDAL
                 {
                     case TableStatus.Free:
                         // Change this to match what your database expects
-                        newStatus = "Free"; // Try "Free" instead of "Available"
+                        newStatus = "Free"; 
                         break;
                     case TableStatus.Occupied:
                         newStatus = "Occupied"; 

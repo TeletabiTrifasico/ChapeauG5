@@ -1,12 +1,5 @@
 ﻿using ChapeauModel;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using ChapeauService;
 
@@ -16,22 +9,19 @@ namespace ChapeauG5.ChapeauUI
     {
         private Employee loggedInEmployee;
         private Table currentTable;
-        private readonly OrderItemService orderItemService = new OrderItemService();
+        private OrderItemService orderItemService;
+        private TableService tableService;
 
         public OccupiedTableManagement(Employee employee, Table table)
         {
             InitializeComponent();
 
-            loggedInEmployee = employee;
-            currentTable = table;
-
-            if (loggedInEmployee == null || currentTable == null)
-            {
-                throw new ArgumentNullException("Employee or Table is null");
-            }
+            loggedInEmployee = employee ?? throw new ArgumentNullException(nameof(employee));
+            currentTable = table ?? throw new ArgumentNullException(nameof(table));
+            orderItemService = new OrderItemService();
+            tableService = new TableService();
 
             lbltabelNumber.Text = $"Table {currentTable.TableNumber}";
-
             this.Load += OccupiedTableManagement_Load;
         }
 
@@ -40,78 +30,43 @@ namespace ChapeauG5.ChapeauUI
             LoadReadyToBeServedItems();
         }
 
-
-
-        public void SetFreeTableButtonEnabled(bool enabled)
-        {
-            freeTablebtn.Enabled = enabled;
-        }
-
-        public void SetTakeOrderButtonEnabled(bool enabled)
-        {
-            takeOrderbtn.Enabled = enabled;
-        }
-
-
         private void freeTablebtn_Click(object sender, EventArgs e)
         {
-
             try
             {
-                // TableService instance
-                var tableService = new ChapeauService.TableService();
-
-                // Update the table status as Free  
-                tableService.UpdateTableStatus(currentTable.TableId, ChapeauModel.TableStatus.Free);
-
-                MessageBox.Show("Table has been set to Free.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                this.Close();
+                SetTableFree();
+                ShowMessage("Table has been set to Free.", "Success", MessageBoxIcon.Information);
+                Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error freeing table: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowMessage("Error freeing table: " + ex.Message, "Error", MessageBoxIcon.Error);
             }
-
         }
 
         private void takeOrderbtn_Click(object sender, EventArgs e)
         {
             try
             {
-                OrderView orderView = new OrderView(loggedInEmployee, currentTable);
-                orderView.Show();
+                OpenOrderView();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error opening OrderView: " + ex.Message);
+                ShowMessage("Error opening OrderView: " + ex.Message, "Error", MessageBoxIcon.Error);
             }
-
         }
-
 
         private void setAsServedBtn_Click(object sender, EventArgs e)
         {
             if (lvReadyToBeServedItems.Items.Count == 0)
             {
-                MessageBox.Show("There are no items ready to be served.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowMessage("There are no items ready to be served.", "Info", MessageBoxIcon.Information);
                 return;
             }
 
-            // Make all ietms in the list served
-            foreach (ListViewItem lvi in lvReadyToBeServedItems.Items)
-            {
-                if (lvi.Tag is OrderItem item)
-                {
-                    orderItemService.UpdateOrderItemStatus(item.OrderItemId, OrderItem.OrderStatus.Served);
-                }
-            }
-
-            MessageBox.Show("All ready-to-be-served items have been marked as served.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            // Update the list
+            MarkAllItemsAsServed();
+            ShowMessage("All ready-to-be-served items have been marked as served.", "Success", MessageBoxIcon.Information);
             LoadReadyToBeServedItems();
-
         }
 
         private void LoadReadyToBeServedItems()
@@ -129,8 +84,43 @@ namespace ChapeauG5.ChapeauUI
             }
         }
 
+        private void SetTableFree()
+        {
+            tableService.UpdateTableStatus(currentTable.TableId, TableStatus.Free);
+        }
+
+        private void OpenOrderView()
+        {
+            var orderView = new OrderView(loggedInEmployee, currentTable);
+            orderView.Show();
+        }
+
+        private void MarkAllItemsAsServed()
+        {
+            foreach (ListViewItem lvi in lvReadyToBeServedItems.Items)
+            {
+                if (lvi.Tag is OrderItem item)
+                {
+                    orderItemService.UpdateOrderItemStatus(item.OrderItemId, OrderItem.OrderStatus.Served);
+                }
+            }
+        }
+
+        private void ShowMessage(string message, string caption, MessageBoxIcon icon)
+        {
+            MessageBox.Show(message, caption, MessageBoxButtons.OK, icon);
+        }
+
+        // Optionally, you can add public methods to enable/disable buttons externally
+        public void SetTakeOrderButtonEnabled(bool enabled)
+        {
+            takeOrderbtn.Enabled = enabled;
+        }
+
+        public void SetFreeTableButtonEnabled(bool enabled)
+        {
+            freeTablebtn.Enabled = enabled;
+        }
     }
-
-
 }
 
