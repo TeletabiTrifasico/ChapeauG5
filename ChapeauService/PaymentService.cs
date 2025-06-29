@@ -7,13 +7,11 @@ namespace ChapeauService
 {
     public class PaymentService
     {
-        private PaymentDao paymentDao;
         private InvoiceDao invoiceDao;
         private OrderDao orderDao;
 
         public PaymentService()
         {
-            paymentDao = new PaymentDao();
             invoiceDao = new InvoiceDao();
             orderDao = new OrderDao();
         }
@@ -80,7 +78,7 @@ namespace ChapeauService
                 payment.Invoice = invoice;
                 
                 // Create each payment in the database
-                int paymentId = paymentDao.CreatePayment(payment);
+                int paymentId = invoiceDao.CreatePayment(payment);
                 
                 // Update the payment ID in our object
                 payment.PaymentId = paymentId;
