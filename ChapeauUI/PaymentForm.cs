@@ -17,6 +17,7 @@ namespace ChapeauG5
         private readonly Employee loggedInEmployee;
         private readonly PaymentService paymentService;
         private readonly OrderService orderService;
+        private readonly TableService tableService;
         
         // Main invoice object that contains all payment-related data including payments list
         private Invoice currentInvoice;
@@ -29,6 +30,7 @@ namespace ChapeauG5
             this.loggedInEmployee = employee;
             this.paymentService = new PaymentService();
             this.orderService = new OrderService();
+            this.tableService = new TableService();
             this.currentInvoice = new Invoice();
         }
 
@@ -49,12 +51,21 @@ namespace ChapeauG5
 
         private bool LoadOrderData()
         {
-            currentOrder = orderService.GetOrderWithItemsById(orderId);
-            
-            if (!ValidateOrderExists()) return false;
-            if (!ValidateOrderHasItems()) return false;
-            
-            return true;
+            try
+            {
+                currentOrder = orderService.GetOrderWithItemsById(orderId);
+                
+                if (!ValidateOrderExists()) return false;
+                if (!ValidateOrderHasItems()) return false;
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading order data: {ex.Message}");
+                ShowErrorAndClose("Database Error", $"Failed to load order information: {ex.Message}");
+                return false;
+            }
         }
 
         private bool ValidateOrderExists()
@@ -115,26 +126,26 @@ namespace ChapeauG5
 
         private void InitializeInvoiceData()
         {
-            var totals = paymentService.CalculateOrderTotals(currentOrder.OrderItems);
-            SetInvoiceBasicInfo(totals);
-            SetInvoiceAmounts(totals);
+            try
+            {
+                // Set basic invoice info first
+                currentInvoice.OrderId = currentOrder;
+                currentInvoice.TotalTipAmount = 0;
+                currentInvoice.CreatedAt = DateTime.Now;
+                
+                // Calculate totals and populate the invoice directly
+                paymentService.CalculateOrderTotals(currentOrder.OrderItems, currentInvoice);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calculating order totals: {ex.Message}");
+                MessageBox.Show($"Error calculating order totals: {ex.Message}", 
+                    "Calculation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw; // Re-throw to be caught by parent method
+            }
         }
 
-        private void SetInvoiceBasicInfo((decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) totals)
-        {
-            currentInvoice.OrderId = currentOrder;
-            currentInvoice.TotalTipAmount = 0;
-            currentInvoice.CreatedAt = DateTime.Now;
-        }
-
-        private void SetInvoiceAmounts((decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) totals)
-        {
-            currentInvoice.TotalAmount = totals.totalWithVat;
-            currentInvoice.TotalVat = totals.lowVat + totals.highVat;
-            currentInvoice.LowVatAmount = totals.lowVat;
-            currentInvoice.HighVatAmount = totals.highVat;
-            currentInvoice.TotalExcludingVat = totals.totalExVat;
-        }
+        // Remove SetInvoiceBasicInfo and SetInvoiceAmounts methods - no longer needed
 
         private void LoadOrderItems()
         {
@@ -330,7 +341,7 @@ namespace ChapeauG5
             Payment splitPayment = new Payment
             {
                 Amount = amount,
-                InvoiceId = currentInvoice
+                Invoice = currentInvoice
             };
             currentInvoice.Payments.Add(splitPayment);
         }
@@ -456,31 +467,32 @@ namespace ChapeauG5
 
         private void ShowPaymentError(Exception ex)
         {
+            Console.WriteLine($"Payment processing error: {ex.Message}");
             MessageBox.Show($"Error processing payment: {ex.Message}", 
                 "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void ProcessSinglePayment()
         {
-            var paymentInfo = GetPaymentInfoFromForm();
+            Payment payment = new Payment();
+            PopulatePaymentFromForm(payment);
             
-            if (ConfirmSinglePayment(paymentInfo.paymentMethod, paymentInfo.finalAmount))
+            if (ConfirmSinglePayment(payment.PaymentMethod, payment.Amount))
             {
-                CompleteSinglePayment(paymentInfo);
+                CompleteSinglePayment(payment);
             }
         }
 
-        private (PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) GetPaymentInfoFromForm()
+        private void PopulatePaymentFromForm(Payment payment)
         {
             dynamic selectedPaymentMethod = cmbPaymentMethod.SelectedItem;
             dynamic selectedFeedbackType = cmbFeedbackType.SelectedItem;
             
-            return (
-                (PaymentMethod)selectedPaymentMethod.Value,
-                (FeedbackType)selectedFeedbackType.Value,
-                txtFeedback.Text,
-                GetFinalAmount()
-            );
+            payment.PaymentMethod = (PaymentMethod)selectedPaymentMethod.Value;
+            payment.FeedbackType = (FeedbackType)selectedFeedbackType.Value;
+            payment.Feedback = txtFeedback.Text;
+            payment.Amount = GetFinalAmount();
+            payment.Invoice = currentInvoice;
         }
 
         private bool ConfirmSinglePayment(PaymentMethod paymentMethod, decimal finalAmount)
@@ -494,34 +506,23 @@ namespace ChapeauG5
             return result == DialogResult.Yes;
         }
 
-        private void CompleteSinglePayment((PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) paymentInfo)
+        private void CompleteSinglePayment(Payment payment)
         {
-            Payment payment = CreatePaymentObject(paymentInfo);
             currentInvoice.AddPayment(payment);
             
             SavePaymentToDatabase();
             ShowSuccessAndClose();
         }
 
-        private Payment CreatePaymentObject((PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback, decimal finalAmount) paymentInfo)
-        {
-            return new Payment
-            {
-                PaymentMethod = paymentInfo.paymentMethod,
-                Amount = paymentInfo.finalAmount,
-                Feedback = paymentInfo.feedback,
-                FeedbackType = paymentInfo.feedbackType
-            };
-        }
-
         private void SavePaymentToDatabase()
         {
             try
             {
-                paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
+                paymentService.ProcessCompleteInvoice(currentInvoice);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Database error saving payment: {ex.Message}");
                 MessageBox.Show($"Error saving payment: {ex.Message}", 
                     "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
@@ -536,23 +537,49 @@ namespace ChapeauG5
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
             
+            FreeTableAfterPayment();
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
+        private void FreeTableAfterPayment()
+        {
+            try
+            {
+                if (currentOrder?.TableId != null)
+                {
+                    tableService.UpdateTableStatus(currentOrder.TableId.TableId, TableStatus.Free);
+                    Console.WriteLine($"Table {currentOrder.TableId.TableNumber} marked as free after payment");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not free table after payment: {ex.Message}");
+            }
+        }
+
         private void ProcessSplitPayment()
         {
-            if (!ValidateSplitPayment()) return;
-            
-            var allPayments = PrepareAllSplitPayments();
-            
-            if (allPayments != null && allPayments.Count > 0)
+            try
             {
-                CompleteSplitPayment(allPayments);
+                if (!ValidateSplitPayment()) return;
+                
+                var allPayments = PrepareAllSplitPayments();
+                
+                if (allPayments != null && allPayments.Count > 0)
+                {
+                    CompleteSplitPayment(allPayments);
+                }
+                else
+                {
+                    ShowPaymentCanceled();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ShowPaymentCanceled();
+                Console.WriteLine($"Error processing split payment: {ex.Message}");
+                MessageBox.Show($"Error processing split payment: {ex.Message}", 
+                    "Split Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -621,10 +648,11 @@ namespace ChapeauG5
         {
             try
             {
-                paymentService.ProcessCompleteInvoice(currentInvoice, orderId);
+                paymentService.ProcessCompleteInvoice(currentInvoice);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Database error saving split payments: {ex.Message}");
                 MessageBox.Show($"Error saving split payments: {ex.Message}", 
                     "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
@@ -634,6 +662,7 @@ namespace ChapeauG5
         private void ShowSplitPaymentSummary()
         {
             ShowPaymentSummary();
+            FreeTableAfterPayment();
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
@@ -731,16 +760,20 @@ namespace ChapeauG5
 
         private Payment ExtractPaymentFromDialog(Form paymentDialog, decimal amountToPay)
         {
+            Payment payment = new Payment();
+            PopulatePaymentFromDialog(paymentDialog, payment, amountToPay);
+            return payment;
+        }
+
+        private void PopulatePaymentFromDialog(Form paymentDialog, Payment payment, decimal amountToPay)
+        {
             var dialogData = GetDialogValues(paymentDialog);
             
-            return new Payment
-            {
-                PaymentMethod = dialogData.paymentMethod,
-                Amount = amountToPay,
-                Feedback = dialogData.feedback,
-                FeedbackType = dialogData.feedbackType,
-                InvoiceId = currentInvoice
-            };
+            payment.PaymentMethod = dialogData.paymentMethod;
+            payment.FeedbackType = dialogData.feedbackType;
+            payment.Feedback = dialogData.feedback;
+            payment.Amount = amountToPay;
+            payment.Invoice = currentInvoice;
         }
 
         private (PaymentMethod paymentMethod, FeedbackType feedbackType, string feedback) GetDialogValues(Form paymentDialog)
@@ -1305,7 +1338,7 @@ namespace ChapeauG5
             Payment splitPayment = new Payment
             {
                 Amount = amount,
-                InvoiceId = currentInvoice
+                Invoice = currentInvoice
             };
             currentInvoice.AddPayment(splitPayment);
         }

@@ -20,7 +20,7 @@ namespace ChapeauModel
     public class Payment
     {
         public int PaymentId { get; set; }
-        public Invoice InvoiceId { get; set; }
+        public Invoice Invoice { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public decimal Amount { get; set; } // Final amount paid (including tip)
         public string Feedback { get; set; }

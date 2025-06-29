@@ -39,7 +39,7 @@ namespace ChapeauModel
             if (Payments == null)
                 Payments = new List<Payment>();
             
-            payment.InvoiceId = this;
+            payment.Invoice = this;
             Payments.Add(payment);
         }
     }
