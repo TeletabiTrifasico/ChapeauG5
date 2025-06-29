@@ -16,7 +16,7 @@ namespace ChapeauService
             orderDao = new OrderDao();
         }
 
-        // Calculate VAT amounts for an order and populate the invoice directly
+        // Calculate VAT amounts for an order and populate the invoice
         public void CalculateOrderTotals(List<OrderItem> orderItems, Invoice invoice)
         {
             decimal totalExVat = 0;
@@ -65,7 +65,7 @@ namespace ChapeauService
         // Process complete invoice with all payments at once
         public void ProcessCompleteInvoice(Invoice invoice)
         {
-            // First create the invoice in the database
+            // Create the invoice in the database
             int invoiceId = invoiceDao.CreateInvoice(invoice);
             
             // Update the invoice ID in our object
@@ -80,11 +80,11 @@ namespace ChapeauService
                 // Create each payment in the database
                 int paymentId = invoiceDao.CreatePayment(payment);
                 
-                // Update the payment ID in our object
+                // Update the payment ID
                 payment.PaymentId = paymentId;
             }
             
-            // Finally, mark the order as done using the orderId from the invoice
+            // Mark the order as done using the orderId from the invoice
             orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
         }
     }

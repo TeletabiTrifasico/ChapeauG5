@@ -12,16 +12,13 @@ namespace ChapeauG5
 {
     public partial class PaymentForm : Form
     {
-        // Reduced global variables - only essential ones
-        private readonly int orderId;
-        private readonly Employee loggedInEmployee;
-        private readonly PaymentService paymentService;
-        private readonly OrderService orderService;
-        private readonly TableService tableService;
-        
-        // Main invoice object that contains all payment-related data including payments list
-        private Invoice currentInvoice;
-        private Order currentOrder;
+        private readonly int orderId; // The ID of the order being paid
+        private readonly Employee loggedInEmployee; // The employee processing the payment
+        private readonly PaymentService paymentService; // Service for handling payment logic
+        private readonly OrderService orderService; // Service for handling order logic
+        private readonly TableService tableService; // Service for handling table logic
+        private Invoice currentInvoice; // The invoice being created for the payment
+        private Order currentOrder; // The order associated with the payment
 
         public PaymentForm(int orderId, Employee employee)
         {
@@ -128,7 +125,7 @@ namespace ChapeauG5
         {
             try
             {
-                // Set basic invoice info first
+                // Set basic invoice info
                 currentInvoice.OrderId = currentOrder;
                 currentInvoice.TotalTipAmount = 0;
                 currentInvoice.CreatedAt = DateTime.Now;
@@ -141,11 +138,9 @@ namespace ChapeauG5
                 Console.WriteLine($"Error calculating order totals: {ex.Message}");
                 MessageBox.Show($"Error calculating order totals: {ex.Message}", 
                     "Calculation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                throw; // Re-throw to be caught by parent method
+                throw; // Caught by parent method
             }
         }
-
-        // Remove SetInvoiceBasicInfo and SetInvoiceAmounts methods - no longer needed
 
         private void LoadOrderItems()
         {
@@ -1315,7 +1310,7 @@ namespace ChapeauG5
             
             if (!ValidateCustomAmountsTotal(amountTextBoxes))
             {
-                ShowCustomSplitDialog(); // Show dialog again for correction
+                ShowCustomSplitDialog();
                 return;
             }
             
