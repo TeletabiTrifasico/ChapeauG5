@@ -18,8 +18,8 @@ namespace ChapeauService
             orderDao = new OrderDao();
         }
 
-        // Calculate VAT amounts for an order
-        public (decimal totalExVat, decimal lowVat, decimal highVat, decimal totalWithVat) CalculateOrderTotals(List<OrderItem> orderItems)
+        // Calculate VAT amounts for an order and populate the invoice directly
+        public void CalculateOrderTotals(List<OrderItem> orderItems, Invoice invoice)
         {
             decimal totalExVat = 0;
             decimal lowVatAmount = 0;  // 9% VAT
@@ -56,11 +56,16 @@ namespace ChapeauService
                 totalExVat += itemExVat;
             }
             
-            return (totalExVat, lowVatAmount, highVatAmount, totalWithVat);
+            // Populate the invoice with calculated totals
+            invoice.TotalAmount = totalWithVat;
+            invoice.TotalVat = lowVatAmount + highVatAmount;
+            invoice.LowVatAmount = lowVatAmount;
+            invoice.HighVatAmount = highVatAmount;
+            invoice.TotalExcludingVat = totalExVat;
         }
 
         // Process complete invoice with all payments at once
-        public void ProcessCompleteInvoice(Invoice invoice, int orderId)
+        public void ProcessCompleteInvoice(Invoice invoice)
         {
             // First create the invoice in the database
             int invoiceId = invoiceDao.CreateInvoice(invoice);
@@ -72,7 +77,7 @@ namespace ChapeauService
             foreach (Payment payment in invoice.Payments)
             {
                 // Ensure payment is linked to the correct invoice
-                payment.InvoiceId = invoice;
+                payment.Invoice = invoice;
                 
                 // Create each payment in the database
                 int paymentId = paymentDao.CreatePayment(payment);
@@ -81,8 +86,8 @@ namespace ChapeauService
                 payment.PaymentId = paymentId;
             }
             
-            // Finally, mark the order as done
-            orderDao.MarkOrderAsDone(orderId);
+            // Finally, mark the order as done using the orderId from the invoice
+            orderDao.MarkOrderAsDone(invoice.OrderId.OrderId);
         }
     }
 }
