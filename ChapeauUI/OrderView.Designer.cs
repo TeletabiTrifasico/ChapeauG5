@@ -82,25 +82,22 @@ namespace ChapeauG5
             cmbCategory.Size = new Size(200, 40);
             cmbCategory.TabIndex = 2;
             cmbCategory.ValueMember = "CategoryId";
-            cmbCategory.SelectedIndexChanged += new EventHandler(cmbCategory_SelectedIndexChanged);
+            cmbCategory.SelectedIndexChanged += cmbCategory_SelectedIndexChanged;
             // 
             // lvMenuItems
             // 
             lvMenuItems.FullRowSelect = true;
-            lvMenuItems.Location = new Point(20, 149);
+            lvMenuItems.Location = new Point(20, 126);
             lvMenuItems.MultiSelect = false;
             lvMenuItems.Name = "lvMenuItems";
             lvMenuItems.Size = new Size(505, 331);
             lvMenuItems.TabIndex = 3;
             lvMenuItems.UseCompatibleStateImageBehavior = false;
             lvMenuItems.View = View.Details;
-            lvMenuItems.Columns.Add("Item");
-            lvMenuItems.Columns.Add("Price");
-            lvMenuItems.Columns.Add("Description");
             // 
             // lblQuantity
             // 
-            lblQuantity.Location = new Point(20, 502);
+            lblQuantity.Location = new Point(20, 474);
             lblQuantity.Name = "lblQuantity";
             lblQuantity.Size = new Size(117, 37);
             lblQuantity.TabIndex = 4;
@@ -108,7 +105,7 @@ namespace ChapeauG5
             // 
             // nudQuantity
             // 
-            nudQuantity.Location = new Point(143, 502);
+            nudQuantity.Location = new Point(143, 474);
             nudQuantity.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             nudQuantity.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudQuantity.Name = "nudQuantity";
@@ -118,7 +115,7 @@ namespace ChapeauG5
             // 
             // lblComment
             // 
-            lblComment.Location = new Point(20, 579);
+            lblComment.Location = new Point(20, 521);
             lblComment.Name = "lblComment";
             lblComment.Size = new Size(180, 44);
             lblComment.TabIndex = 6;
@@ -126,7 +123,7 @@ namespace ChapeauG5
             // 
             // txtComment
             // 
-            txtComment.Location = new Point(220, 579);
+            txtComment.Location = new Point(220, 521);
             txtComment.Name = "txtComment";
             txtComment.Size = new Size(305, 39);
             txtComment.TabIndex = 7;
@@ -134,35 +131,28 @@ namespace ChapeauG5
             // btnAddToOrder
             // 
             btnAddToOrder.BackColor = Color.LightGreen;
-            btnAddToOrder.Location = new Point(20, 653);
+            btnAddToOrder.Location = new Point(20, 595);
             btnAddToOrder.Name = "btnAddToOrder";
             btnAddToOrder.Size = new Size(505, 92);
             btnAddToOrder.TabIndex = 8;
             btnAddToOrder.Text = "Add to Order";
             btnAddToOrder.UseVisualStyleBackColor = false;
-            btnAddToOrder.Click += new EventHandler(btnAddToOrder_Click);
+            btnAddToOrder.Click += btnAddToOrder_Click;
             // 
             // lvOrderItems
             // 
             lvOrderItems.FullRowSelect = true;
-            lvOrderItems.Location = new Point(633, 520);
+            lvOrderItems.Location = new Point(631, 474);
             lvOrderItems.Name = "lvOrderItems";
             lvOrderItems.Size = new Size(686, 300);
             lvOrderItems.TabIndex = 9;
             lvOrderItems.UseCompatibleStateImageBehavior = false;
             lvOrderItems.View = View.Details;
-            lvOrderItems.FullRowSelect = true;
-            lvOrderItems.Columns.Add("Item");
-            lvOrderItems.Columns.Add("Qty");
-            lvOrderItems.Columns.Add("Price");
-            lvOrderItems.Columns.Add("Subtotal");
-            lvOrderItems.Columns.Add("Status");
-            lvOrderItems.Columns.Add("Comment");
             // 
             // lblOrderTotal
             // 
             lblOrderTotal.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            lblOrderTotal.Location = new Point(633, 842);
+            lblOrderTotal.Location = new Point(631, 791);
             lblOrderTotal.Name = "lblOrderTotal";
             lblOrderTotal.Size = new Size(350, 58);
             lblOrderTotal.TabIndex = 10;
@@ -172,93 +162,85 @@ namespace ChapeauG5
             // 
             btnEditItem.BackColor = Color.LightYellow;
             btnEditItem.Enabled = false;
-            btnEditItem.Location = new Point(825, 931);
+            btnEditItem.Location = new Point(20, 763);
             btnEditItem.Name = "btnEditItem";
             btnEditItem.Size = new Size(120, 60);
             btnEditItem.TabIndex = 11;
             btnEditItem.Text = "Edit Item";
             btnEditItem.UseVisualStyleBackColor = false;
-            btnEditItem.Click += new EventHandler(btnEditItem_Click);
+            btnEditItem.Click += btnEditItem_Click;
             // 
             // btnRemoveItem
             // 
-            btnRemoveItem.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             btnRemoveItem.BackColor = Color.LightPink;
             btnRemoveItem.Enabled = false;
-            btnRemoveItem.Location = new Point(951, 931);
+            btnRemoveItem.Location = new Point(159, 763);
             btnRemoveItem.Name = "btnRemoveItem";
             btnRemoveItem.Size = new Size(200, 60);
             btnRemoveItem.TabIndex = 12;
             btnRemoveItem.Text = "Remove Item";
             btnRemoveItem.UseVisualStyleBackColor = false;
-            btnRemoveItem.Click += new EventHandler(btnRemoveItem_Click);
+            btnRemoveItem.Click += btnRemoveItem_Click;
             // 
             // btnSaveOrder
             // 
             btnSaveOrder.BackColor = Color.LightGreen;
             btnSaveOrder.Enabled = false;
-            btnSaveOrder.Location = new Point(1157, 931);
+            btnSaveOrder.Location = new Point(365, 763);
             btnSaveOrder.Name = "btnSaveOrder";
             btnSaveOrder.Size = new Size(160, 60);
             btnSaveOrder.TabIndex = 13;
             btnSaveOrder.Text = "Save Order";
             btnSaveOrder.UseVisualStyleBackColor = false;
-            btnSaveOrder.Click += new EventHandler(btnSaveOrder_Click);
+            btnSaveOrder.Click += btnSaveOrder_Click;
             // 
             // btnPayment
             // 
             btnPayment.BackColor = Color.LightBlue;
-            btnPayment.Location = new Point(1159, 842);
+            btnPayment.Location = new Point(1001, 791);
             btnPayment.Name = "btnPayment";
             btnPayment.Size = new Size(160, 60);
             btnPayment.TabIndex = 14;
             btnPayment.Text = "Payment";
             btnPayment.UseVisualStyleBackColor = false;
-            btnPayment.Click += new EventHandler(btnPayment_Click);
+            btnPayment.Click += btnPayment_Click;
             // 
             // btnCancel
             // 
             btnCancel.BackColor = Color.LightGray;
-            btnCancel.Location = new Point(1167, 1013);
+            btnCancel.Location = new Point(1167, 789);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(150, 60);
             btnCancel.TabIndex = 15;
             btnCancel.Text = "Close";
             btnCancel.UseVisualStyleBackColor = false;
-            btnCancel.Click += new EventHandler(btnCancel_Click);
+            btnCancel.Click += btnCancel_Click;
             // 
             // btnMarkServed
             // 
             btnMarkServed.BackColor = Color.LightCyan;
-            btnMarkServed.Enabled = false;
-            btnMarkServed.Location = new Point(606, 931);
+            btnMarkServed.Location = new Point(20, 693);
             btnMarkServed.Name = "btnMarkServed";
             btnMarkServed.Size = new Size(213, 60);
             btnMarkServed.TabIndex = 16;
             btnMarkServed.Text = "Mark as Served";
             btnMarkServed.UseVisualStyleBackColor = false;
-            btnMarkServed.Click += new EventHandler(btnMarkServed_Click);
+            btnMarkServed.Click += btnMarkServed_Click;
             // 
             // orderedList
             // 
             orderedList.FullRowSelect = true;
-            orderedList.Location = new Point(631, 92);
+            orderedList.Location = new Point(631, 75);
             orderedList.Name = "orderedList";
             orderedList.Size = new Size(686, 300);
             orderedList.TabIndex = 17;
             orderedList.UseCompatibleStateImageBehavior = false;
             orderedList.View = View.Details;
-            orderedList.Columns.Add("Item");
-            orderedList.Columns.Add("Qty");
-            orderedList.Columns.Add("Price");
-            orderedList .Columns.Add("Subtotal");
-            orderedList.Columns.Add("Status");
-            orderedList.Columns.Add("Comment");
             // 
             // label1
             // 
             label1.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            label1.Location = new Point(633, 445);
+            label1.Location = new Point(631, 414);
             label1.Name = "label1";
             label1.Size = new Size(284, 52);
             label1.TabIndex = 18;
@@ -275,7 +257,7 @@ namespace ChapeauG5
             // 
             // OrderView
             // 
-            ClientSize = new Size(1329, 1119);
+            ClientSize = new Size(1329, 865);
             Controls.Add(lblTable);
             Controls.Add(lblCategory);
             Controls.Add(cmbCategory);
@@ -349,86 +331,6 @@ namespace ChapeauG5
             }
         }
         
-        private void btnPayment_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Check if all items have been served
-                bool allServed = true;
-                foreach (OrderItem item in newOrderItems)
-                {
-                    if (item.Status != OrderItem.OrderStatus.Served)
-                    {
-                        allServed = false;
-                        break;
-                    }
-                }
-                
-                if (!allServed)
-                {
-                    MessageBox.Show("All order items must be served before proceeding to payment.", 
-                        "Items Not Served", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                
-                // First check if there's a saved order
-                if (!currentOrderId.HasValue || !isExistingOrder)
-                {
-                    // No saved order, ask if the user wants to save it first
-                    DialogResult result = MessageBox.Show(
-                        "You need to save the order before proceeding to payment.\nWould you like to save it now?",
-                        "Save Order",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                        
-                    if (result == DialogResult.Yes)
-                    {
-                        // Save the order first
-                        btnSaveOrder_Click(sender, e);
-                        
-                        // If still no valid order after attempted save, return
-                        if (!currentOrderId.HasValue)
-                        {
-                            MessageBox.Show("Cannot proceed to payment without a saved order.",
-                                "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        // User chose not to save
-                        return;
-                    }
-                }
-                
-                // Check if there are any items in the order
-                if (orderedItems.Count == 0)
-                {
-                    MessageBox.Show("Cannot process payment for an empty order.", 
-                        "Empty Order", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                
-                PaymentForm paymentForm = new PaymentForm(currentOrderId.Value, loggedInEmployee);
-                
-                // Show the payment form as a dialog
-                if (paymentForm.ShowDialog() == DialogResult.OK)
-                {
-                    // Payment was successful, refresh the table view
-                    MessageBox.Show("Payment processed successfully!", 
-                        "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    
-                    // Close this form
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error processing payment: {ex.Message}", 
-                    "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
         
         #endregion
         
