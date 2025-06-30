@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using ChapeauG5.ChapeauUI.Forms;
 using ChapeauModel;
 using ChapeauService;
 
@@ -147,28 +148,28 @@ namespace ChapeauG5
             // Here is where we change forms based on role
 
             Form formToShow;
-            
+
             switch (role)
             {
                 case EmployeeRole.Waiter:
                     formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
-                /*
+
                 case EmployeeRole.Bar:
-                    formToShow = new BarDashboardForm(); // Create this form
+                    formToShow = new KitchenBarViewForm(false); // Create this form
                     break;
                 case EmployeeRole.Kitchen:
-                    formToShow = new KitchenDashboardForm(); // Create this form
+                    formToShow = new KitchenBarViewForm(true); // Create this form
                     break;
-                case EmployeeRole.Manager:
-                    formToShow = new ManagerDashboardForm(); // Create this form
-                    break;
-                */
+                //case EmployeeRole.Manager:
+                //    formToShow = new ManagerDashboardForm(); // Create this form
+                //    break;
+
                 default:
                     formToShow = new TableView(ChapeauApp.LoggedInUser);
                     break;
             }
-            
+
             // Set the form's start position and size
             formToShow.StartPosition = FormStartPosition.CenterScreen;
             formToShow.FormClosed += (s, args) => this.Close();
