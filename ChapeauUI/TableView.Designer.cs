@@ -106,6 +106,8 @@ namespace ChapeauG5
             this.tlpTables.Margin = new Padding(0);
             this.tlpTables.Padding = new Padding(10);
             this.Controls.Add(this.tlpTables);
+
+//            this.Load += new EventHandler(this.TableView_Load);
         }
 
         #endregion
