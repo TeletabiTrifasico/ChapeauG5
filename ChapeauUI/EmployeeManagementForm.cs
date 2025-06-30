@@ -66,7 +66,8 @@ namespace ChapeauUI
             employeeDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Email",
-                HeaderText = "Email"
+                HeaderText = "Email",
+                Width = 200
             });
 
             employeeDataGridView.Columns.Add(new DataGridViewComboBoxColumn
@@ -210,6 +211,39 @@ namespace ChapeauUI
                 {
                     MessageBox.Show("Failed to update status: " + ex.Message);
                 }
+            }
+        }
+
+        
+
+        private void deleteButton_Click_1(object sender, EventArgs e)
+        {
+            if (employeeDataGridView.SelectedRows.Count > 0)
+            {
+                var selected = (Employee)employeeDataGridView.SelectedRows[0].DataBoundItem;
+
+                DialogResult result = MessageBox.Show(
+                    $"Are you sure you want to delete {selected.FirstName} {selected.LastName}?",
+                    "Confirm Deletion",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        employeeDao.DeleteEmployee(selected.EmployeeId);
+                        _ = LoadEmployeesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Deletion failed: " + ex.Message);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select an employee to delete.");
             }
         }
     }

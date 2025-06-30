@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,9 +26,24 @@ namespace ChapeauUI
             LoadMenuItems();
         }
 
+
+        private void CourseFilterComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadMenuItems();
+        }
+
         private async void LoadMenuItems()
         {
             var items = await menuItemDao.GetAllMenuItemsAsync();
+
+            // ✅ Check if courseFilterComboBox has a selected item before using it
+            if (courseFilterComboBox?.SelectedItem != null && courseFilterComboBox.SelectedItem.ToString() != "All")
+            {
+                if (Enum.TryParse<CourseType>(courseFilterComboBox.SelectedItem.ToString(), out var selectedCourse))
+                {
+                    items = items.Where(item => item.CourseType == selectedCourse).ToList();
+                }
+            }
 
             menuDataGridView.AutoGenerateColumns = false;
             menuDataGridView.Columns.Clear();
@@ -35,7 +51,8 @@ namespace ChapeauUI
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "MenuItemId",
-                HeaderText = "ID"
+                HeaderText = "ID",
+                Width = 50,
             });
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -45,33 +62,38 @@ namespace ChapeauUI
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Description",
-                HeaderText = "Description"
+                HeaderText = "Description",
+                Width = 400, 
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             });
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Price",
-                HeaderText = "Price"
+                HeaderText = "Price",
+                Width = 50,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "C2", FormatProvider = CultureInfo.CreateSpecificCulture("en-IE") }
             });
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Stock",
-                HeaderText = "Stock"
+                HeaderText = "Stock",
+                Width = 50
+
             });
             menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "VatPercentage",
-                HeaderText = "VAT"
-            });
-            menuDataGridView.Columns.Add(new DataGridViewTextBoxColumn
+                HeaderText = "VAT",
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "0\\%" },
+                 Width = 50
+            }); 
+            menuDataGridView.Columns.Add(new DataGridViewComboBoxColumn
             {
                 DataPropertyName = "CourseType",
-                HeaderText = "Course"
+                HeaderText = "Course",
+                DataSource = Enum.GetValues(typeof(CourseType))
             });
-            menuDataGridView.Columns.Add(new DataGridViewCheckBoxColumn
-            {
-                DataPropertyName = "IsAlcoholic",
-                HeaderText = "Alcoholic"
-            });
+
             menuDataGridView.Columns.Add(new DataGridViewCheckBoxColumn
             {
                 DataPropertyName = "IsActive",
@@ -79,8 +101,77 @@ namespace ChapeauUI
             });
 
             menuDataGridView.DataSource = items;
+
+            menuDataGridView.RowValidated -= menuDataGridView_RowValidated;
             menuDataGridView.RowValidated += menuDataGridView_RowValidated;
+
+            menuDataGridView.RowPrePaint -= MenuDataGridView_RowPrePaint;
+            menuDataGridView.RowPrePaint += MenuDataGridView_RowPrePaint;
+
+            menuDataGridView.CellDoubleClick += MenuDataGridView_CellDoubleClick;
         }
+
+
+        private void MenuDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Ensure the clicked cell is valid
+            if (e.RowIndex >= 0 && menuDataGridView.Columns[e.ColumnIndex].DataPropertyName == "Description")
+            {
+                var row = menuDataGridView.Rows[e.RowIndex];
+                var item = (MenuItem)row.DataBoundItem;
+
+                string newDescription = ShowMultilineEditor(item.Description);
+                if (newDescription != null && newDescription != item.Description)
+                {
+                    item.Description = newDescription;
+
+                    try
+                    {
+                        menuItemDao.UpdateMenuItem(item); // Save change
+                        LoadMenuItems(); // Refresh
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Failed to update description:\n" + ex.Message);
+                    }
+                }
+            }
+        }
+
+        private string ShowMultilineEditor(string currentText)
+        {
+            Form editForm = new Form
+            {
+                Text = "Edit Description",
+                Size = new Size(400, 300),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MinimizeBox = false,
+                MaximizeBox = false
+            };
+
+            TextBox editor = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                Text = currentText,
+                ScrollBars = ScrollBars.Vertical
+            };
+            editForm.Controls.Add(editor);
+
+            Button okButton = new Button
+            {
+                Text = "OK",
+                Dock = DockStyle.Bottom,
+                DialogResult = DialogResult.OK,
+                Height = 30
+            };
+            editForm.Controls.Add(okButton);
+            editForm.AcceptButton = okButton;
+
+            return editForm.ShowDialog() == DialogResult.OK ? editor.Text : null;
+        }
+
 
         private void menuDataGridView_RowValidated(object sender, DataGridViewCellEventArgs e)
         {
@@ -93,6 +184,26 @@ namespace ChapeauUI
                 catch (Exception ex)
                 {
                     MessageBox.Show("Error updating menu item: " + ex.Message);
+                }
+            }
+        }
+
+        private void MenuDataGridView_RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
+        {
+            var row = menuDataGridView.Rows[e.RowIndex];
+            if (row.DataBoundItem is MenuItem item)
+            {
+                if (item.Stock == 0)
+                {
+                    row.DefaultCellStyle.BackColor = Color.LightCoral; // out of stock
+                }
+                else if (item.Stock <= 10)
+                {
+                    row.DefaultCellStyle.BackColor = Color.Khaki; // low stock
+                }
+                else
+                {
+                    row.DefaultCellStyle.BackColor = Color.White; // reset
                 }
             }
         }
@@ -110,20 +221,57 @@ namespace ChapeauUI
 
         private void button1_Click(object sender, EventArgs e)
         {
+            // Simple validation
+            if (string.IsNullOrWhiteSpace(nameTextBox.Text) ||
+                string.IsNullOrWhiteSpace(priceTextBox.Text) ||
+                string.IsNullOrWhiteSpace(stockTextBox.Text) ||
+                string.IsNullOrWhiteSpace(vatTextBox.Text))
+            {
+                MessageBox.Show("Please fill in all required fields: Name, Price, Stock, and VAT.", "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!decimal.TryParse(priceTextBox.Text, out decimal price) || price < 0)
+            {
+                MessageBox.Show("Please enter a valid positive price.", "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(stockTextBox.Text, out int stock) || stock < 0)
+            {
+                MessageBox.Show("Please enter a valid stock quantity.", "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(vatTextBox.Text, out int vat) || vat < 0 || vat > 100)
+            {
+                MessageBox.Show("Please enter a valid VAT percentage (0–100).", "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             var newItem = new MenuItem
             {
                 Name = nameTextBox.Text,
+                Description = descriptionTextBox.Text,
                 Price = decimal.Parse(priceTextBox.Text),
                 Stock = int.Parse(stockTextBox.Text),
-                CategoryId = new Menu { CategoryId = 1 }, // Required by DB, hardcoded or set some default
-                VatPercentage = 21,
-                CourseType = CourseType.Main,
+                VatPercentage = int.Parse(vatTextBox.Text),
+                CategoryId = new Menu { CategoryId = 1 }, // still hardcoded
+                CourseType = (CourseType)courseTypeComboBox.SelectedItem,
                 IsAlcoholic = false,
                 IsActive = true
             };
 
-            menuItemDao.AddMenuItem(newItem);
-            LoadMenuItems();
+            try
+            {
+                menuItemDao.AddMenuItem(newItem);
+                LoadMenuItems();
+                MessageBox.Show("Menu item added successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error adding menu item: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -148,6 +296,38 @@ namespace ChapeauUI
                 var selected = (MenuItem)menuDataGridView.SelectedRows[0].DataBoundItem;
                 menuItemDao.SetMenuItemActiveStatus(selected.MenuItemId, !selected.IsActive);
                 LoadMenuItems();
+            }
+        }
+
+        private void deleteButton_Click(object sender, EventArgs e)
+        {
+            if (menuDataGridView.SelectedRows.Count > 0)
+            {
+                var selectedItem = (MenuItem)menuDataGridView.SelectedRows[0].DataBoundItem;
+
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to delete '{selectedItem.Name}'?",
+                    "Confirm Delete",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (confirmResult == DialogResult.Yes)
+                {
+                    try
+                    {
+                        menuItemDao.DeleteMenuItem(selectedItem.MenuItemId);
+                        LoadMenuItems();
+                        MessageBox.Show("Item deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error deleting menu item: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select an item to delete.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

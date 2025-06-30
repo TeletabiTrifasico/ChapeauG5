@@ -16,7 +16,7 @@ namespace ChapeauDAL
             string query = @"INSERT INTO Invoice (order_id, total_amount, total_vat, total_tip_amount, created_at)
                             VALUES (@OrderId, @TotalAmount, @TotalVat, @TotalTipAmount, @CreatedAt);
                             SELECT SCOPE_IDENTITY();";
-            
+
             // Parameters to prevent SQL injection and ensure type safety
             SqlParameter[] parameters = new SqlParameter[]
             {
@@ -27,43 +27,43 @@ namespace ChapeauDAL
                 new SqlParameter("@TotalTipAmount", invoice.TotalTipAmount),
                 new SqlParameter("@CreatedAt", invoice.CreatedAt)
             };
-            
+
             // Execute the insert query and return the new invoice ID
             return ExecuteInsertQuery(query, parameters);
         }
-        
+
         // Retrieves an invoice from the database by its associated order ID.
         public Invoice? GetInvoiceByOrderId(int orderId)
         {
             // Query to find invoice by order ID
             string query = "SELECT * FROM Invoice WHERE order_id = @OrderId";
             SqlParameter[] parameters = { new SqlParameter("@OrderId", orderId) };
-            
+
             // Execute the query and get the result table
             DataTable dataTable = ExecuteSelectQuery(query, parameters);
-            
+
             // Return null if no invoice found
             if (dataTable.Rows.Count == 0)
                 return null;
-            
+
             // Convert the data row to an Invoice object
             return ReadTable(dataTable.Rows[0]);
         }
-        
+
         // Retrieves an invoice from the database by its invoice ID. (Same as above)
         public Invoice? GetInvoiceById(int invoiceId)
         {
             string query = "SELECT * FROM Invoice WHERE invoice_id = @InvoiceId";
             SqlParameter[] parameters = { new SqlParameter("@InvoiceId", invoiceId) };
-            
+
             DataTable dataTable = ExecuteSelectQuery(query, parameters);
-            
+
             if (dataTable.Rows.Count == 0)
                 return null;
-            
+
             return ReadTable(dataTable.Rows[0]);
         }
-        
+
         // Helper method to convert a DataRow from the Invoice table into an Invoice object.
         private Invoice ReadTable(DataRow dr)
         {
@@ -78,10 +78,10 @@ namespace ChapeauDAL
                 TotalTipAmount = (decimal)dr["total_tip_amount"],
                 CreatedAt = (DateTime)dr["created_at"]
             };
-            
+
             return invoice;
         }
-        
+
         // Generates a new invoice by querying order details and calculating totals.
         // This doesn't save the invoice to the database, just creates the object.
         public Invoice GenerateInvoiceForOrder(int orderId)
@@ -100,21 +100,21 @@ namespace ChapeauDAL
                 JOIN Menu_Item mi ON oi.menu_item_id = mi.menu_item_id
                 LEFT JOIN Drink_Item di ON mi.menu_item_id = di.menu_item_id
                 WHERE o.order_id = @OrderId AND oi.status = 'Served'";
-            
+
             SqlParameter[] parameters = { new SqlParameter("@OrderId", orderId) };
-            
+
             // Execute the query and get all the order items
             DataTable dataTable = ExecuteSelectQuery(query, parameters);
-            
+
             // Create a new invoice object
             Invoice invoice = new Invoice();
             // Create Order object with just the ID
             invoice.OrderId = new Order { OrderId = orderId };
-            
+
             // Initialize running totals
             decimal totalAmount = 0;
             decimal totalVat = 0;
-            
+
             // Process each order item row from the query result
             foreach (DataRow dr in dataTable.Rows)
             {
@@ -122,15 +122,15 @@ namespace ChapeauDAL
                 int vatPercentage = (int)dr["vat_percentage"];
                 decimal price = Convert.ToDecimal(dr["price"]);
                 int quantity = (int)dr["quantity"];
-                
+
                 // Check if item is alcoholic (for special VAT rules)
                 // is_alcoholic will be DBNull for non-drink items, so need to handle that case
                 bool isAlcoholic = dr["is_alcoholic"] != DBNull.Value && (bool)dr["is_alcoholic"];
-                
+
                 // Calculate item totals
                 decimal itemSubtotal = price * quantity;
                 decimal itemVat = itemSubtotal * (vatPercentage / 100m);
-                
+
                 // Create an InvoiceItem object to represent this line item
                 InvoiceItem item = new InvoiceItem()
                 {
@@ -146,24 +146,29 @@ namespace ChapeauDAL
                     VatAmount = itemVat,
                     IsAlcoholic = isAlcoholic
                 };
-                
+
                 // Add the item to the invoice's items collection
                 invoice.Items.Add(item);
-                
+
                 // Add to running totals
                 totalAmount += itemSubtotal;
                 totalVat += itemVat;
             }
-            
+
             // Set the calculated totals on the invoice
             invoice.TotalAmount = totalAmount;
             invoice.TotalVat = totalVat;
-            
+
             return invoice;
         }
 
 
 
+
+    
+
+
+        // InvoiceDao method:
 
         public List<Invoice> GetInvoicesBetween(DateTime start, DateTime end)
         {
@@ -184,6 +189,5 @@ namespace ChapeauDAL
 
             return invoices;
         }
-
     }
 }

@@ -85,6 +85,7 @@ namespace ChapeauUI
             incomeLabel.Text = $"€{totalIncome:0.00}";
             tipsLabel.Text = $"€{totalTips:0.00}";
         }
-    }
+} 
+
 
 }

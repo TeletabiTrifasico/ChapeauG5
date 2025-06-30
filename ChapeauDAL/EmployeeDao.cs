@@ -72,18 +72,18 @@ namespace ChapeauDAL
         public void AddEmployee(Employee emp)
         {
             string query = @"
-            INSERT INTO Employee (username, password, first_name, last_name, phone_number, role, email, is_active)
-            VALUES (@username, @password, @first_name, @last_name, @phone, @role, @email, 1)";
+    INSERT INTO Employee (username, password, first_name, last_name, phone_number, role, email, is_active)
+    VALUES (@username, @password, @first_name, @last_name, @phone, @role, @email, 1)";
 
             SqlParameter[] parameters = {
-            CreateParameter("@username", emp.Username),
-            CreateParameter("@password", emp.PasswordHash),
-            CreateParameter("@first_name", emp.FirstName),
-            CreateParameter("@last_name", emp.LastName),
-            CreateParameter("@phone", emp.PhoneNumber),
-            CreateParameter("@role", emp.Role),
-            CreateParameter("@email", emp.Email)
-        };
+        CreateParameter("@username", emp.Username),
+        CreateParameter("@password", emp.PasswordHash),
+        CreateParameter("@first_name", emp.FirstName),
+        CreateParameter("@last_name", emp.LastName),
+        CreateParameter("@phone", emp.PhoneNumber),
+        CreateParameter("@role", emp.Role.ToString()),  // FIXED
+        CreateParameter("@email", emp.Email)
+    };
 
             ExecuteEditQuery(query, parameters);
         }
@@ -123,5 +123,18 @@ namespace ChapeauDAL
             CreateParameter("@id", id)
         });
         }
+
+        public void DeleteEmployee(int employeeId)
+        {
+            string query = "DELETE FROM Employee WHERE employee_id = @EmployeeId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+        new SqlParameter("@EmployeeId", employeeId)
+            };
+
+            ExecuteEditQuery(query, parameters);
+        }
+
     }
 }
