@@ -38,32 +38,16 @@ namespace ChapeauG5
             orderedItems = new List<OrderItem>();
             newOrderItems = new List<OrderItem>();
         }
-        
+
         // Form load event: sets up UI and loads existing order if present
         private void OrderView_Load(object sender, EventArgs e)
         {
             try
             {
                 lblTable.Text = $"Table {selectedTable.TableNumber}";
-
                 LoadMenuCategories();
-                
-                // Check if there's already an order for this table
-                Order existingOrder = orderService.GetOrderByTableId(selectedTable.TableId);
-                
-                if (existingOrder != null)
-                {
-                    // Load order and its items
-                    Order orderWithItems = orderService.GetOrderWithItemsById(existingOrder.OrderId);
-                    currentOrderId = orderWithItems.OrderId;
-                    isExistingOrder = true;
 
-                    orderedItems = orderWithItems.OrderItems ?? new List<OrderItem>();
-                    LoadOrderedItems();
-
-                    // Mark table as occupied
-                    tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
-                }
+                LoadOrderIfExists();
 
                 UpdatePaymentButtonState();
             }
@@ -73,6 +57,22 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void LoadOrderIfExists()
+        {
+            var existingOrder = orderService.GetOrderByTableId(selectedTable.TableId);
+            if (existingOrder == null)
+                return;
+
+            var orderWithItems = orderService.GetOrderWithItemsById(existingOrder.OrderId);
+            currentOrderId = orderWithItems.OrderId;
+            isExistingOrder = true;
+            orderedItems = orderWithItems.OrderItems ?? new List<OrderItem>();
+            LoadOrderedItems();
+
+            tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
+        }
+
 
         // Loads menu categories into the category combo box
         private void LoadMenuCategories()
@@ -181,36 +181,50 @@ namespace ChapeauG5
         {
             try
             {
-                if (!ValidateSelection(out MenuItem selectedItem, out int quantity, out string comment)) return;
+                if (!ValidateSelection(out MenuItem selectedItem, out int quantity, out string comment))
+                    return;
 
-                // Check if item with same comment already exists in new order
-                var existingItem = orderService.FindExistingOrderItem(newOrderItems, selectedItem, comment);
-
-                if (existingItem != null)
-                {
-                    // If exists, just update the quantity
-                    orderService.UpdateOrderItemQuantity(existingItem, quantity);
-                }
-                else
-                {
-                    // Otherwise, create a new order item
-                    var newItem = orderService.CreateNewOrderItem(selectedItem, quantity, comment, currentOrderId);
-                    newOrderItems.Add(newItem);
-                }
+                AddOrUpdateOrderItem(selectedItem, quantity, comment);
 
                 ListNewOrders();
                 ResetOrderForm();
                 btnSaveOrder.Visible = true;
+                UpdatePaymentButtonState();
 
-                MessageBox.Show($"{quantity}x {selectedItem.Name} added to order.", "Item Added",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowItemAddedMessage(quantity, selectedItem.Name);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error adding item to order: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowErrorMessage("adding item to order", ex);
             }
         }
+
+        private void AddOrUpdateOrderItem(MenuItem selectedItem, int quantity, string comment)
+        {
+            var existingItem = orderService.FindExistingOrderItem(newOrderItems, selectedItem, comment);
+            if (existingItem != null)
+            {
+                orderService.UpdateOrderItemQuantity(existingItem, quantity);
+            }
+            else
+            {
+                var newItem = orderService.CreateNewOrderItem(selectedItem, quantity, comment, currentOrderId);
+                newOrderItems.Add(newItem);
+            }
+        }
+
+        private void ShowItemAddedMessage(int quantity, string itemName)
+        {
+            MessageBox.Show($"{quantity}x {itemName} added to order.", "Item Added",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void ShowErrorMessage(string action, Exception ex)
+        {
+            MessageBox.Show($"Error {action}: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
 
         // Validates that a menu item is selected and quantity is valid
         private bool ValidateSelection(out MenuItem selectedItem, out int quantity, out string comment)
@@ -275,6 +289,8 @@ namespace ChapeauG5
                 SaveOrderItems();
 
                 FinalizeOrder();
+
+                UpdatePaymentButtonState();
             }
             catch (Exception ex)
             {
@@ -334,6 +350,10 @@ namespace ChapeauG5
 
                 orderService.RemoveOrderItem(newOrderItems, selectedItem);
                 ListNewOrders();
+
+                RefreshOrderViews();
+
+                UpdatePaymentButtonState();
             }
             catch (Exception ex)
             {
@@ -393,23 +413,74 @@ namespace ChapeauG5
         {
             try
             {
-                if (!ValidateItemSelection(out OrderItem selectedItem)) return;
+                if (!TryGetSelectedItem(out OrderItem selectedItem))
+                    return;
 
-                using (Form editForm = BuildEditForm(selectedItem, out NumericUpDown nudEditQuantity, out TextBox txtEditComment))
-                {
-                    if (editForm.ShowDialog() == DialogResult.OK)
-                    {
-                        orderService.UpdateOrderItemDetails(selectedItem, (int)nudEditQuantity.Value, txtEditComment.Text);
-                        ListNewOrders();
-                    }
-                }
+                EditOrderItem(selectedItem);
+                UpdatePaymentButtonState();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error editing item: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowErrorMessage(ex);
             }
         }
+
+        private bool TryGetSelectedItem(out OrderItem selectedItem)
+        {
+            if (ValidateItemSelection(out selectedItem))
+                return true;
+
+            selectedItem = null;
+            return false;
+        }
+
+        private void EditOrderItem(OrderItem selectedItem)
+        {
+            using var editForm = BuildEditForm(selectedItem, out NumericUpDown nudEditQuantity, out TextBox txtEditComment);
+            if (editForm.ShowDialog() != DialogResult.OK)
+                return;
+
+            int newQuantity = (int)nudEditQuantity.Value;
+            string newComment = txtEditComment.Text;
+
+            var duplicate = FindDuplicateItem(selectedItem, newComment);
+
+            if (duplicate != null)
+            {
+                MergeWithDuplicate(duplicate, newQuantity, selectedItem);
+            }
+            else
+            {
+                UpdateSelectedItem(selectedItem, newQuantity, newComment);
+            }
+
+            ListNewOrders();
+        }
+
+        private OrderItem FindDuplicateItem(OrderItem selectedItem, string newComment)
+        {
+            return newOrderItems.Find(item =>
+                item != selectedItem &&
+                item.MenuItemId.MenuItemId == selectedItem.MenuItemId.MenuItemId &&
+                string.Equals(item.Comment, newComment, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void MergeWithDuplicate(OrderItem duplicate, int quantityToAdd, OrderItem toRemove)
+        {
+            orderService.UpdateOrderItemQuantity(duplicate, quantityToAdd);
+            orderService.RemoveOrderItem(newOrderItems, toRemove);
+        }
+
+        private void UpdateSelectedItem(OrderItem item, int quantity, string comment)
+        {
+            orderService.UpdateOrderItemDetails(item, quantity, comment);
+        }
+
+        private void ShowErrorMessage(Exception ex)
+        {
+            MessageBox.Show($"Error editing item: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
 
         // Builds a modal form for editing an order item
         private Form BuildEditForm(OrderItem selectedItem, out NumericUpDown nudEditQuantity, out TextBox txtEditComment)
@@ -523,34 +594,60 @@ namespace ChapeauG5
         {
             try
             {
-                if (!TryGetSelectedOrderItem(out OrderItem selectedItem)) return;
-
-                if (orderService.IsAlreadyServed(selectedItem)) 
-                {
-                    MessageBox.Show("This item has already been served.",
-                        "Already Served", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (!TryGetSelectedOrderItem(out OrderItem selectedItem))
                     return;
-                }
 
-                if (!orderService.CanBeMarkedAsServed(selectedItem, isExistingOrder)) 
-                {
-                    MessageBox.Show("You need to save the order before marking items as served.",
-                        "Save Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (CheckAlreadyServed(selectedItem))
                     return;
-                }
 
-                orderService.MarkItemAsServed(selectedItem);
-                RefreshOrderViews();
+                if (!CanMarkAsServed(selectedItem))
+                    return;
 
-                MessageBox.Show("Item marked as served.", "Status Updated",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MarkItemServedAndRefresh(selectedItem);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error updating item status: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowError("updating item status", ex);
             }
         }
+
+        private bool CheckAlreadyServed(OrderItem item)
+        {
+            if (orderService.IsAlreadyServed(item))
+            {
+                MessageBox.Show("This item has already been served.", "Already Served",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
+            }
+            return false;
+        }
+
+        private bool CanMarkAsServed(OrderItem item)
+        {
+            if (!orderService.CanBeMarkedAsServed(item, isExistingOrder))
+            {
+                MessageBox.Show("You need to save the order before marking items as served.", "Save Required",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        private void MarkItemServedAndRefresh(OrderItem item)
+        {
+            orderService.MarkItemAsServed(item);
+            RefreshOrderViews();
+
+            MessageBox.Show("Item marked as served.", "Status Updated",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void ShowError(string action, Exception ex)
+        {
+            MessageBox.Show($"Error {action}: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
 
         // Helper to get the selected order item from the ordered list
         private bool TryGetSelectedOrderItem(out OrderItem selectedItem)
