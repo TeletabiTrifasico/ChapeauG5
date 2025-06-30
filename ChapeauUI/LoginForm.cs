@@ -128,12 +128,5 @@ namespace ChapeauG5
             formToShow.FormClosed += (s, args) => this.Close();
             formToShow.Show();
         }
-
-        public void ClearCredentials()
-        {
-            txtUsername.Text = string.Empty;
-            txtPassword.Text = string.Empty;
-            lblError.Text = string.Empty;
-        }
     }
 }
