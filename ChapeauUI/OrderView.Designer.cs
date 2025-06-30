@@ -24,187 +24,278 @@ namespace ChapeauG5
             }
             base.Dispose(disposing);
         }
-        
+
         #region Windows Form Designer generated code
-        
+
         /// <summary>
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            
-            this.Text = "Order Management";
-            this.Size = new Size(900, 700);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            
-            // Table Label
-            this.lblTable = new Label();
-            this.lblTable.Location = new Point(20, 20);
-            this.lblTable.Size = new Size(200, 30);
-            this.lblTable.Font = new Font("Segoe UI", 14, FontStyle.Bold);
-            this.lblTable.Text = "Table X";
-            
-            // Category Selection
-            this.lblCategory = new Label();
-            this.lblCategory.Location = new Point(20, 60);
-            this.lblCategory.Size = new Size(100, 25);
-            this.lblCategory.Text = "Menu Category:";
-            
-            this.cmbCategory = new ComboBox();
-            this.cmbCategory.Location = new Point(130, 60);
-            this.cmbCategory.Size = new Size(200, 25);
-            this.cmbCategory.DropDownStyle = ComboBoxStyle.DropDownList;
-            this.cmbCategory.DisplayMember = "Name";
-            this.cmbCategory.ValueMember = "CategoryId";
-            this.cmbCategory.SelectedIndexChanged += new EventHandler(this.cmbCategory_SelectedIndexChanged);
-            
-            // Menu Items List
-            this.lvMenuItems = new ListView();
-            this.lvMenuItems.Location = new Point(20, 100);
-            this.lvMenuItems.Size = new Size(400, 300);
-            this.lvMenuItems.View = View.Details;
-            this.lvMenuItems.FullRowSelect = true;
-            this.lvMenuItems.MultiSelect = false;
-            this.lvMenuItems.Columns.Add("Item", 150);
-            this.lvMenuItems.Columns.Add("Price", 70);
-            this.lvMenuItems.Columns.Add("Description", 180);
-            
-            // Quantity Selection
-            this.lblQuantity = new Label();
-            this.lblQuantity.Location = new Point(20, 410);
-            this.lblQuantity.Size = new Size(70, 25);
-            this.lblQuantity.Text = "Quantity:";
-            
-            this.nudQuantity = new NumericUpDown();
-            this.nudQuantity.Location = new Point(100, 410);
-            this.nudQuantity.Size = new Size(60, 25);
-            this.nudQuantity.Minimum = 1;
-            this.nudQuantity.Maximum = 20;
-            this.nudQuantity.Value = 1;
-            
-            // Comment
-            this.lblComment = new Label();
-            this.lblComment.Location = new Point(170, 410);
-            this.lblComment.Size = new Size(70, 25);
-            this.lblComment.Text = "Comment:";
-            
-            this.txtComment = new TextBox();
-            this.txtComment.Location = new Point(250, 410);
-            this.txtComment.Size = new Size(170, 25);
-            
-            // Add to Order Button
-            this.btnAddToOrder = new Button();
-            this.btnAddToOrder.Location = new Point(250, 450);
-            this.btnAddToOrder.Size = new Size(170, 40);
-            this.btnAddToOrder.Text = "Add to Order";
-            this.btnAddToOrder.BackColor = Color.LightGreen;
-            this.btnAddToOrder.Click += new EventHandler(this.btnAddToOrder_Click);
-            
-            // Order Items List
-            this.lvOrderItems = new ListView();
-            this.lvOrderItems.Location = new Point(450, 100);
-            this.lvOrderItems.Size = new Size(420, 400);
-            this.lvOrderItems.View = View.Details;
-            this.lvOrderItems.FullRowSelect = true;
-            this.lvOrderItems.Columns.Add("Item", 120);
-            this.lvOrderItems.Columns.Add("Qty", 40);
-            this.lvOrderItems.Columns.Add("Price", 60);
-            this.lvOrderItems.Columns.Add("Subtotal", 70);
-            this.lvOrderItems.Columns.Add("Status", 60);
-            this.lvOrderItems.Columns.Add("Comment", 70);
-            
-            // Order Total
-            this.lblOrderTotal = new Label();
-            this.lblOrderTotal.Location = new Point(450, 510);
-            this.lblOrderTotal.Size = new Size(250, 30);
-            this.lblOrderTotal.Font = new Font("Segoe UI", 12, FontStyle.Bold);
-            this.lblOrderTotal.Text = "Order Total: €0.00";
-            this.lblOrderTotal.Visible = true;
-            
-            // Edit Item Button
-            this.btnEditItem = new Button();
-            this.btnEditItem.Location = new Point(450, 550);
-            this.btnEditItem.Size = new Size(120, 40);
-            this.btnEditItem.Text = "Edit Item";
-            this.btnEditItem.BackColor = Color.LightYellow;
-            this.btnEditItem.Click += new EventHandler(this.btnEditItem_Click);
-            this.btnEditItem.Enabled = false;
-            
-            // Remove Item Button
-            this.btnRemoveItem = new Button();
-            this.btnRemoveItem.Location = new Point(580, 550);
-            this.btnRemoveItem.Size = new Size(120, 40);
-            this.btnRemoveItem.Text = "Remove Item";
-            this.btnRemoveItem.BackColor = Color.LightPink;
-            this.btnRemoveItem.Click += new EventHandler(this.btnRemoveItem_Click);
-            this.btnRemoveItem.Enabled = false;
-            
-            // Save Order Button
-            this.btnSaveOrder = new Button();
-            this.btnSaveOrder.Location = new Point(710, 550);
-            this.btnSaveOrder.Size = new Size(160, 40);
-            this.btnSaveOrder.Text = "Save Order";
-            this.btnSaveOrder.BackColor = Color.LightGreen;
-            this.btnSaveOrder.Click += new EventHandler(this.btnSaveOrder_Click);
-            this.btnSaveOrder.Enabled = false;
-            
-            // Payment Button
-            this.btnPayment = new Button();
-            this.btnPayment.Location = new Point(750, 510);
-            this.btnPayment.Size = new Size(120, 40);
-            this.btnPayment.Text = "Payment";
-            this.btnPayment.BackColor = Color.LightBlue;
-            this.btnPayment.Click += new EventHandler(this.btnPayment_Click);
-            
-            // Cancel Button
-            this.btnCancel = new Button();
-            this.btnCancel.Location = new Point(750, 600);
-            this.btnCancel.Size = new Size(120, 40);
-            this.btnCancel.Text = "Close";
-            this.btnCancel.BackColor = Color.LightGray;
-            this.btnCancel.Click += new EventHandler(this.btnCancel_Click);
-            
-            // Mark as Served Button
-            this.btnMarkServed = new Button();
-            this.btnMarkServed.Location = new Point(320, 550);
-            this.btnMarkServed.Size = new Size(120, 40);
-            this.btnMarkServed.Text = "Mark as Served";
-            this.btnMarkServed.BackColor = Color.LightCyan;
-            this.btnMarkServed.Click += new EventHandler(this.btnMarkServed_Click);
-            this.btnMarkServed.Enabled = false;
-            
-            this.Controls.Add(this.lblTable);
-            this.Controls.Add(this.lblCategory);
-            this.Controls.Add(this.cmbCategory);
-            this.Controls.Add(this.lvMenuItems);
-            this.Controls.Add(this.lblQuantity);
-            this.Controls.Add(this.nudQuantity);
-            this.Controls.Add(this.lblComment);
-            this.Controls.Add(this.txtComment);
-            this.Controls.Add(this.btnAddToOrder);
-            this.Controls.Add(this.lvOrderItems);
-            this.Controls.Add(this.lblOrderTotal);
-            this.Controls.Add(this.btnEditItem);
-            this.Controls.Add(this.btnRemoveItem);
-            this.Controls.Add(this.btnSaveOrder);
-            this.Controls.Add(this.btnPayment);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnMarkServed);
-            
-            this.Load += new EventHandler(this.OrderView_Load);
-            this.FormClosing += new FormClosingEventHandler(this.OrderView_FormClosing);
+            lblTable = new Label();
+            lblCategory = new Label();
+            cmbCategory = new ComboBox();
+            lvMenuItems = new ListView();
+            lblQuantity = new Label();
+            nudQuantity = new NumericUpDown();
+            lblComment = new Label();
+            txtComment = new TextBox();
+            btnAddToOrder = new Button();
+            lvOrderItems = new ListView();
+            lblOrderTotal = new Label();
+            btnEditItem = new Button();
+            btnRemoveItem = new Button();
+            btnSaveOrder = new Button();
+            btnPayment = new Button();
+            btnCancel = new Button();
+            btnMarkServed = new Button();
+            orderedList = new ListView();
+            label1 = new Label();
+            label2 = new Label();
+            ((System.ComponentModel.ISupportInitialize)nudQuantity).BeginInit();
+            SuspendLayout();
+            // 
+            // lblTable
+            // 
+            lblTable.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblTable.Location = new Point(20, 20);
+            lblTable.Name = "lblTable";
+            lblTable.Size = new Size(200, 52);
+            lblTable.TabIndex = 0;
+            lblTable.Text = "Table X";
+            // 
+            // lblCategory
+            // 
+            lblCategory.Location = new Point(20, 80);
+            lblCategory.Name = "lblCategory";
+            lblCategory.Size = new Size(100, 42);
+            lblCategory.TabIndex = 1;
+            lblCategory.Text = "Menu Category:";
+            // 
+            // cmbCategory
+            // 
+            cmbCategory.DisplayMember = "Name";
+            cmbCategory.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCategory.Location = new Point(126, 80);
+            cmbCategory.Name = "cmbCategory";
+            cmbCategory.Size = new Size(200, 40);
+            cmbCategory.TabIndex = 2;
+            cmbCategory.ValueMember = "CategoryId";
+            cmbCategory.SelectedIndexChanged += cmbCategory_SelectedIndexChanged;
+            // 
+            // lvMenuItems
+            // 
+            lvMenuItems.FullRowSelect = true;
+            lvMenuItems.Location = new Point(20, 126);
+            lvMenuItems.MultiSelect = false;
+            lvMenuItems.Name = "lvMenuItems";
+            lvMenuItems.Size = new Size(505, 331);
+            lvMenuItems.TabIndex = 3;
+            lvMenuItems.UseCompatibleStateImageBehavior = false;
+            lvMenuItems.View = View.Details;
+            // 
+            // lblQuantity
+            // 
+            lblQuantity.Location = new Point(20, 474);
+            lblQuantity.Name = "lblQuantity";
+            lblQuantity.Size = new Size(117, 37);
+            lblQuantity.TabIndex = 4;
+            lblQuantity.Text = "Quantity:";
+            // 
+            // nudQuantity
+            // 
+            nudQuantity.Location = new Point(143, 474);
+            nudQuantity.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            nudQuantity.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            nudQuantity.Name = "nudQuantity";
+            nudQuantity.Size = new Size(60, 39);
+            nudQuantity.TabIndex = 5;
+            nudQuantity.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // lblComment
+            // 
+            lblComment.Location = new Point(20, 521);
+            lblComment.Name = "lblComment";
+            lblComment.Size = new Size(180, 44);
+            lblComment.TabIndex = 6;
+            lblComment.Text = "Comment:";
+            // 
+            // txtComment
+            // 
+            txtComment.Location = new Point(220, 521);
+            txtComment.Name = "txtComment";
+            txtComment.Size = new Size(305, 39);
+            txtComment.TabIndex = 7;
+            // 
+            // btnAddToOrder
+            // 
+            btnAddToOrder.BackColor = Color.LightGreen;
+            btnAddToOrder.Location = new Point(20, 595);
+            btnAddToOrder.Name = "btnAddToOrder";
+            btnAddToOrder.Size = new Size(505, 92);
+            btnAddToOrder.TabIndex = 8;
+            btnAddToOrder.Text = "Add to Order";
+            btnAddToOrder.UseVisualStyleBackColor = false;
+            btnAddToOrder.Click += btnAddToOrder_Click;
+            // 
+            // lvOrderItems
+            // 
+            lvOrderItems.FullRowSelect = true;
+            lvOrderItems.Location = new Point(631, 474);
+            lvOrderItems.Name = "lvOrderItems";
+            lvOrderItems.Size = new Size(686, 300);
+            lvOrderItems.TabIndex = 9;
+            lvOrderItems.UseCompatibleStateImageBehavior = false;
+            lvOrderItems.View = View.Details;
+            // 
+            // lblOrderTotal
+            // 
+            lblOrderTotal.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblOrderTotal.Location = new Point(631, 791);
+            lblOrderTotal.Name = "lblOrderTotal";
+            lblOrderTotal.Size = new Size(350, 58);
+            lblOrderTotal.TabIndex = 10;
+            lblOrderTotal.Text = "Order Total: €0.00";
+            // 
+            // btnEditItem
+            // 
+            btnEditItem.BackColor = Color.LightYellow;
+            btnEditItem.Enabled = false;
+            btnEditItem.Location = new Point(20, 763);
+            btnEditItem.Name = "btnEditItem";
+            btnEditItem.Size = new Size(120, 60);
+            btnEditItem.TabIndex = 11;
+            btnEditItem.Text = "Edit Item";
+            btnEditItem.UseVisualStyleBackColor = false;
+            btnEditItem.Click += btnEditItem_Click;
+            // 
+            // btnRemoveItem
+            // 
+            btnRemoveItem.BackColor = Color.LightPink;
+            btnRemoveItem.Enabled = false;
+            btnRemoveItem.Location = new Point(159, 763);
+            btnRemoveItem.Name = "btnRemoveItem";
+            btnRemoveItem.Size = new Size(200, 60);
+            btnRemoveItem.TabIndex = 12;
+            btnRemoveItem.Text = "Remove Item";
+            btnRemoveItem.UseVisualStyleBackColor = false;
+            btnRemoveItem.Click += btnRemoveItem_Click;
+            // 
+            // btnSaveOrder
+            // 
+            btnSaveOrder.BackColor = Color.LightGreen;
+            btnSaveOrder.Enabled = false;
+            btnSaveOrder.Location = new Point(365, 763);
+            btnSaveOrder.Name = "btnSaveOrder";
+            btnSaveOrder.Size = new Size(160, 60);
+            btnSaveOrder.TabIndex = 13;
+            btnSaveOrder.Text = "Save Order";
+            btnSaveOrder.UseVisualStyleBackColor = false;
+            btnSaveOrder.Click += btnSaveOrder_Click;
+            // 
+            // btnPayment
+            // 
+            btnPayment.BackColor = Color.LightBlue;
+            btnPayment.Location = new Point(1001, 791);
+            btnPayment.Name = "btnPayment";
+            btnPayment.Size = new Size(160, 60);
+            btnPayment.TabIndex = 14;
+            btnPayment.Text = "Payment";
+            btnPayment.UseVisualStyleBackColor = false;
+            btnPayment.Click += btnPayment_Click;
+            // 
+            // btnCancel
+            // 
+            btnCancel.BackColor = Color.LightGray;
+            btnCancel.Location = new Point(1167, 789);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(150, 60);
+            btnCancel.TabIndex = 15;
+            btnCancel.Text = "Close";
+            btnCancel.UseVisualStyleBackColor = false;
+            btnCancel.Click += btnCancel_Click;
+            // 
+            // btnMarkServed
+            // 
+            btnMarkServed.BackColor = Color.LightCyan;
+            btnMarkServed.Location = new Point(20, 693);
+            btnMarkServed.Name = "btnMarkServed";
+            btnMarkServed.Size = new Size(213, 60);
+            btnMarkServed.TabIndex = 16;
+            btnMarkServed.Text = "Mark as Served";
+            btnMarkServed.UseVisualStyleBackColor = false;
+            btnMarkServed.Click += btnMarkServed_Click;
+            // 
+            // orderedList
+            // 
+            orderedList.FullRowSelect = true;
+            orderedList.Location = new Point(631, 75);
+            orderedList.Name = "orderedList";
+            orderedList.Size = new Size(686, 300);
+            orderedList.TabIndex = 17;
+            orderedList.UseCompatibleStateImageBehavior = false;
+            orderedList.View = View.Details;
+            // 
+            // label1
+            // 
+            label1.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            label1.Location = new Point(631, 414);
+            label1.Name = "label1";
+            label1.Size = new Size(284, 52);
+            label1.TabIndex = 18;
+            label1.Text = "New Order";
+            // 
+            // label2
+            // 
+            label2.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            label2.Location = new Point(631, 20);
+            label2.Name = "label2";
+            label2.Size = new Size(200, 52);
+            label2.TabIndex = 19;
+            label2.Text = "Ordered";
+            // 
+            // OrderView
+            // 
+            ClientSize = new Size(1329, 865);
+            Controls.Add(lblTable);
+            Controls.Add(lblCategory);
+            Controls.Add(cmbCategory);
+            Controls.Add(lvMenuItems);
+            Controls.Add(lblQuantity);
+            Controls.Add(nudQuantity);
+            Controls.Add(lblComment);
+            Controls.Add(txtComment);
+            Controls.Add(btnAddToOrder);
+            Controls.Add(label2);
+            Controls.Add(orderedList);
+            Controls.Add(label1);
+            Controls.Add(lvOrderItems);
+            Controls.Add(lblOrderTotal);
+            Controls.Add(btnEditItem);
+            Controls.Add(btnRemoveItem);
+            Controls.Add(btnSaveOrder);
+            Controls.Add(btnPayment);
+            Controls.Add(btnCancel);
+            Controls.Add(btnMarkServed);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            Name = "OrderView";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Order Management";
+            FormClosing += OrderView_FormClosing;
+            Load += OrderView_Load;
+            ((System.ComponentModel.ISupportInitialize)nudQuantity).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
         }
-        
+
         private void OrderView_FormClosing(object sender, FormClosingEventArgs e)
         {
             try
             {
                 // Only ask for confirmation if there are unsaved changes and it's not from Cancel button
-                if (orderItems.Count > 0 && !isExistingOrder && e.CloseReason == CloseReason.UserClosing)
+                if (newOrderItems.Count > 0 && !isExistingOrder && e.CloseReason == CloseReason.UserClosing)
                 {
                     DialogResult result = MessageBox.Show(
                         "Are you sure you want to close this order view? All unsaved changes will be lost.",
@@ -240,86 +331,6 @@ namespace ChapeauG5
             }
         }
         
-        private void btnPayment_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Check if all items have been served
-                bool allServed = true;
-                foreach (OrderItem item in orderItems)
-                {
-                    if (item.Status != OrderItem.OrderStatus.Served)
-                    {
-                        allServed = false;
-                        break;
-                    }
-                }
-                
-                if (!allServed)
-                {
-                    MessageBox.Show("All order items must be served before proceeding to payment.", 
-                        "Items Not Served", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                
-                // First check if there's a saved order
-                if (!currentOrderId.HasValue || !isExistingOrder)
-                {
-                    // No saved order, ask if the user wants to save it first
-                    DialogResult result = MessageBox.Show(
-                        "You need to save the order before proceeding to payment.\nWould you like to save it now?",
-                        "Save Order",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                        
-                    if (result == DialogResult.Yes)
-                    {
-                        // Save the order first
-                        btnSaveOrder_Click(sender, e);
-                        
-                        // If still no valid order after attempted save, return
-                        if (!currentOrderId.HasValue)
-                        {
-                            MessageBox.Show("Cannot proceed to payment without a saved order.",
-                                "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        // User chose not to save
-                        return;
-                    }
-                }
-                
-                // Check if there are any items in the order
-                if (orderItems.Count == 0)
-                {
-                    MessageBox.Show("Cannot process payment for an empty order.", 
-                        "Empty Order", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                
-                PaymentForm paymentForm = new PaymentForm(currentOrderId.Value, loggedInEmployee);
-                
-                // Show the payment form as a dialog
-                if (paymentForm.ShowDialog() == DialogResult.OK)
-                {
-                    // Payment was successful, refresh the table view
-                    MessageBox.Show("Payment processed successfully!", 
-                        "Payment Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    
-                    // Close this form
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error processing payment: {ex.Message}", 
-                    "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
         
         #endregion
         
@@ -340,5 +351,8 @@ namespace ChapeauG5
         private Button btnPayment;
         private Button btnCancel;
         private Button btnMarkServed;
+        private ListView orderedList;
+        private Label label1;
+        private Label label2;
     }
 }
