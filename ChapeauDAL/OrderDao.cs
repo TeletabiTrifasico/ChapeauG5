@@ -6,7 +6,7 @@ using ChapeauModel;
 
 namespace ChapeauDAL
 {
-    public class OrderDao : BaseDao
+    public class OrderDao : BaseDao, IKitchenBarDao
     {
         public int CreateOrder(Order order)
         {
@@ -357,6 +357,157 @@ namespace ChapeauDAL
             
             return result;
         }
+
+
+        #region Minimal Helper Methods for IKitchenBarDao
+
+        public IEnumerable<Order> GetActiveOrders()
+        {
+            string query = @"
+                SELECT o.*, e.first_name, e.last_name, e.role, t.table_number, t.capacity
+                FROM [ORDER] o
+                INNER JOIN EMPLOYEE e ON o.employee_id = e.employee_id
+                INNER JOIN [TABLE] t ON o.table_id = t.table_id
+                WHERE o.is_done = 0
+                ORDER BY o.created_at DESC";
+
+            return GetOrdersWithQuery(query);
+        }
+
+        public IEnumerable<Order> GetCompletedOrders()
+        {
+            string query = @"
+                SELECT o.*, e.first_name, e.last_name, e.role, t.table_number, t.capacity
+                FROM [ORDER] o
+                INNER JOIN EMPLOYEE e ON o.employee_id = e.employee_id
+                INNER JOIN [TABLE] t ON o.table_id = t.table_id
+                WHERE o.is_done = 1
+                ORDER BY o.created_at DESC";
+
+            return GetOrdersWithQuery(query);
+        }
+
+        public OrderItem GetOrderItemByOrderItemId(int orderItemId)
+        {
+            // Reuse existing GetOrderItemsByOrderId and filter
+            string query = @"
+                SELECT order_id FROM ORDER_ITEM WHERE order_item_id = @OrderItemId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItemId)
+            };
+
+            DataTable dataTable = ExecuteSelectQuery(query, parameters);
+            if (dataTable.Rows.Count == 0) return null;
+
+            int orderId = (int)dataTable.Rows[0]["order_id"];
+            var orderItems = GetOrderItemsByOrderId(orderId);
+
+            return orderItems.FirstOrDefault(item => item.OrderItemId == orderItemId);
+        }
+
+        public IEnumerable<OrderItem> GetOrderItemsForKitchen()
+        {
+            return GetOrderItemsForRole("('Lunch', 'Dinner')");
+        }
+
+        public IEnumerable<OrderItem> GetOrderItemsForBar()
+        {
+            return GetOrderItemsForRole("('Drinks')");
+        }
+        public bool UpdateOrderItemStatus(OrderItem orderItem)
+        {
+            string query = @"
+                UPDATE ORDER_ITEM 
+                SET status = @Status
+                WHERE order_item_id = @OrderItemId";
+
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+                new SqlParameter("@OrderItemId", orderItem.OrderItemId),
+                new SqlParameter("@Status", orderItem.Status.ToString())
+            };
+
+            ExecuteEditQuery(query, parameters);
+            return true;
+        }
+
+        private IEnumerable<Order> GetOrdersWithQuery(string query)
+        {
+            DataTable dataTable = ExecuteSelectQuery(query, null);
+            List<Order> orders = new List<Order>();
+
+            foreach (DataRow dr in dataTable.Rows)
+            {
+                var order = ReadOrder(dr);
+
+                // Enhance with employee and table info
+                order.EmployeeId.FirstName = (string)dr["first_name"];
+                order.EmployeeId.LastName = (string)dr["last_name"];
+                order.EmployeeId.Role = Enum.Parse<EmployeeRole>((string)dr["role"]);
+                order.TableId.TableNumber = (int)dr["table_number"];
+                order.TableId.Capacity = (int)dr["capacity"];
+
+                // Reuse existing method for order items
+                order.OrderItems = GetOrderItemsByOrderId(order.OrderId);
+                orders.Add(order);
+            }
+
+            return orders;
+        }
+
+        private IEnumerable<OrderItem> GetOrderItemsForRole(string menuCardFilter)
+        {
+            string query = $@"
+                SELECT oi.order_id, t.table_number, t.table_id, o.created_at
+                FROM ORDER_ITEM oi
+                INNER JOIN MENU_ITEM mi ON oi.menu_item_id = mi.menu_item_id
+                INNER JOIN MENU mc ON mi.category_id = mc.category_id
+                INNER JOIN [ORDER] o ON oi.order_id = o.order_id
+                INNER JOIN [TABLE] t ON o.table_id = t.table_id
+                WHERE mc.menu_card IN {menuCardFilter}
+                  AND oi.status IN ('Ordered', 'BeingPrepared')
+                  AND o.is_done = 0
+                GROUP BY oi.order_id, t.table_number, t.table_id, o.created_at
+                ORDER BY o.created_at";
+
+            DataTable dataTable = ExecuteSelectQuery(query, null);
+            List<OrderItem> allOrderItems = new List<OrderItem>();
+
+            foreach (DataRow dr in dataTable.Rows)
+            {
+                int orderId = (int)dr["order_id"];
+                var orderItems = GetOrderItemsByOrderId(orderId);
+
+                // Filter items and enhance with table info
+                var filteredItems = orderItems.Where(item =>
+                    item.MenuItemId?.CategoryId?.MenuCard.ToString() == "Food" && menuCardFilter.Contains("Lunch") ||
+                    item.MenuItemId?.CategoryId?.MenuCard.ToString() == "Food" && menuCardFilter.Contains("Dinner") ||
+                    item.MenuItemId?.CategoryId?.MenuCard.ToString() == "Drinks" && menuCardFilter.Contains("Drinks"));
+
+                foreach (var item in filteredItems)
+                {
+                    if (item.Status == OrderItem.OrderStatus.Ordered || item.Status == OrderItem.OrderStatus.BeingPrepared)
+                    {
+                        // Fix: Ensure TableId is not null before setting properties
+                        if (item.OrderId.TableId == null)
+                        {
+                            item.OrderId.TableId = new Table();
+                        }
+
+                        item.OrderId.TableId.TableId = (int)dr["table_id"];
+                        item.OrderId.TableId.TableNumber = (int)dr["table_number"];
+                        item.OrderId.CreatedAt = (DateTime)dr["created_at"];
+                        allOrderItems.Add(item);
+                    }
+                }
+            }
+
+            return allOrderItems.OrderBy(item => item.CreatedAt);
+        }
+
+        #endregion
 
     }
 }
