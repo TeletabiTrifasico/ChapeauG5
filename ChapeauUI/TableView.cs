@@ -19,7 +19,7 @@ namespace ChapeauG5
         public TableView(Employee employee)
         {
             InitializeComponent();
-            RefreshTables();
+         
 
             tableService = new TableService();
             orderService = new OrderService();
@@ -32,6 +32,7 @@ namespace ChapeauG5
             loggedInEmployee = employee;
 
             lblWelcome.Text = $"Welcome, {loggedInEmployee.FirstName}!";
+            RefreshTables();
         }
 
 
