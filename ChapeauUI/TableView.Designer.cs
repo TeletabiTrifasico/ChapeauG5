@@ -72,7 +72,7 @@ namespace ChapeauG5
             this.btnMenuView.BackColor = Color.LightGray;
             this.btnMenuView.Location = new Point(this.btnLogout.Left - this.btnMenuView.Width - 10, 10);
             this.btnMenuView.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnMenuView.Click += new EventHandler(this.btnMenuView_Click);
+            //this.btnMenuView.Click += new EventHandler(this.btnMenuView_Click);
 
             // Add controls to navbar
             this.panelNavBar.Controls.Add(this.btnLogout);
@@ -106,8 +106,6 @@ namespace ChapeauG5
             this.tlpTables.Margin = new Padding(0);
             this.tlpTables.Padding = new Padding(10);
             this.Controls.Add(this.tlpTables);
-
-            this.Load += new EventHandler(this.TableView_Load);
         }
 
         #endregion
