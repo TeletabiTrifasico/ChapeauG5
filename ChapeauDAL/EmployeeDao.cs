@@ -15,22 +15,10 @@ namespace ChapeauDAL
             var parameters = new SqlParameter[] {
                 new SqlParameter("@Username", username)
             };
-            
+
             return await ExecuteQuerySingleAsync(query, ReadEmployee, parameters);
         }
 
-        // Get employee by ID
-        public async Task<Employee> GetByIdAsync(int id)
-        {
-            string query = "SELECT * FROM EMPLOYEE WHERE employee_id = @EmployeeId";
-            var parameters = new SqlParameter[] {
-                new SqlParameter("@EmployeeId", id)
-            };
-            
-            return await ExecuteQuerySingleAsync(query, ReadEmployee, parameters);
-        }
-
-        // Helper method to read employee data from SqlDataReader
         private Employee ReadEmployee(SqlDataReader reader)
         {
             Employee employee = new Employee
@@ -45,105 +33,95 @@ namespace ChapeauDAL
                 Email = (string)reader["email"],
                 IsActive = (bool)reader["is_active"]
             };
-            
+
             return employee;
         }
-
-
-
-        //Boozie Stuff
-        public List<Employee> GetAllEmployees()
-        {
-            List<Employee> employees = new List<Employee>();
-            string query = "SELECT * FROM Employee";
-
-            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
-            {
-                conn.Open();
-                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        employees.Add(new Employee
-                        {
-                            EmployeeId = (int)reader["employee_id"],
-                            Username = reader["username"].ToString()!,
-                            PasswordHash = reader["password"].ToString()!,
-                            FirstName = reader["first_name"].ToString()!,
-                            LastName = reader["last_name"].ToString()!,
-                            PhoneNumber = reader["phone_number"] as string,
-                            Role = ParseEmployeeRole(reader["role"].ToString()!),
-                            Email = reader["email"].ToString()!,
-                            IsActive = (bool)reader["is_active"],
-                        });
-                    }
-                }
-            }
-            return employees;
-        }
-
-        public void AddEmployee(Employee employee)
-        {
-            string query = "INSERT INTO Employee (first_name, last_name, username, password, role, is_active) VALUES (@first_name, @last_name, @username, @password, @role, 1)";
-            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
-            {
-                conn.Open();
-                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
-                {
-                    cmd.Parameters.AddWithValue("@first_name", employee.FirstName);
-                    cmd.Parameters.AddWithValue("@last_name", employee.LastName);
-                    cmd.Parameters.AddWithValue("@username", employee.Username);
-                    cmd.Parameters.AddWithValue("@password", employee.PasswordHash);
-                    cmd.Parameters.AddWithValue("@role", employee.Role);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        public void UpdateEmployee(Employee employee)
-        {
-            string query = "UPDATE Employee SET first_name = @first_name, last_name = @last_name, username = @username, password = @password, role = @role WHERE employee_id = @employee_id";
-            using (SqlConnection conn = GetConnection()) // Added missing declaration for 'conn'
-            {
-                conn.Open();
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@first_name", employee.FirstName);
-                    cmd.Parameters.AddWithValue("@last_name", employee.LastName);
-                    cmd.Parameters.AddWithValue("@username", employee.Username);
-                    cmd.Parameters.AddWithValue("@password", employee.PasswordHash);
-                    cmd.Parameters.AddWithValue("@role", employee.Role);
-                    cmd.Parameters.AddWithValue("@employee_id", employee.EmployeeId);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        public void SetEmployeeActiveStatus(int employeeId, bool isActive)
-        {
-            string query = "UPDATE Employee SET is_active = @is_active WHERE employee_id = @employee_id";
-            using (SqlConnection conn = GetConnection()) // Ensure 'conn' is declared here
-            {
-                conn.Open();
-                using (SqlCommand cmd = new SqlCommand(query, conn)) // 'conn' is now in scope
-                {
-                    cmd.Parameters.AddWithValue("@is_active", isActive);
-                    cmd.Parameters.AddWithValue("@employee_id", employeeId);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-
-
-
-
-
         // Parse string role to enum
         private EmployeeRole ParseEmployeeRole(string role)
         {
             return Enum.Parse<EmployeeRole>(role);
+        }
+
+
+
+
+
+
+
+
+
+
+        public async Task<List<Employee>> GetAllEmployeesAsync()
+        {
+            string query = "SELECT * FROM Employee";
+
+            return (await ExecuteQueryAsync(query, reader => new Employee
+            {
+                EmployeeId = (int)reader["employee_id"],
+                Username = reader["username"].ToString(),
+                PasswordHash = reader["password"].ToString(),
+                FirstName = reader["first_name"].ToString(),
+                LastName = reader["last_name"].ToString(),
+                PhoneNumber = reader["phone_number"].ToString(),
+                Email = reader["email"].ToString(),
+                IsActive = (bool)reader["is_active"],
+                Role = Enum.TryParse<EmployeeRole>(reader["role"].ToString(), out var role) ? role : EmployeeRole.Waiter // or another sensible default
+            })).ToList();
+        }
+
+        public void AddEmployee(Employee emp)
+        {
+            string query = @"
+            INSERT INTO Employee (username, password, first_name, last_name, phone_number, role, email, is_active)
+            VALUES (@username, @password, @first_name, @last_name, @phone, @role, @email, 1)";
+
+            SqlParameter[] parameters = {
+            CreateParameter("@username", emp.Username),
+            CreateParameter("@password", emp.PasswordHash),
+            CreateParameter("@first_name", emp.FirstName),
+            CreateParameter("@last_name", emp.LastName),
+            CreateParameter("@phone", emp.PhoneNumber),
+            CreateParameter("@role", emp.Role),
+            CreateParameter("@email", emp.Email)
+        };
+
+            ExecuteEditQuery(query, parameters);
+        }
+
+        public void UpdateEmployee(Employee emp)
+        {
+            string query = @"
+        UPDATE Employee
+        SET 
+            first_name = @first_name,
+            last_name = @last_name,
+            username = @username,
+            email = @email,
+            role = @role,
+            is_active = @is_active
+        WHERE employee_id = @employee_id";
+
+            var parameters = new[]
+            {
+        new SqlParameter("@first_name", emp.FirstName),
+        new SqlParameter("@last_name", emp.LastName),
+        new SqlParameter("@username", emp.Username),
+        new SqlParameter("@email", emp.Email),
+        new SqlParameter("@role", emp.Role.ToString()), // ust match DB exactly
+        new SqlParameter("@is_active", emp.IsActive),
+        new SqlParameter("@employee_id", emp.EmployeeId)
+    };
+
+            ExecuteEditQuery(query, parameters);
+        }
+
+        public void SetEmployeeActiveStatus(int id, bool isActive)
+        {
+            string query = "UPDATE Employee SET is_active = @active WHERE employee_id = @id";
+            ExecuteEditQuery(query, new[] {
+            CreateParameter("@active", isActive),
+            CreateParameter("@id", id)
+        });
         }
     }
 }

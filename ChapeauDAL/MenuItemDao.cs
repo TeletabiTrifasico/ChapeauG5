@@ -8,116 +8,126 @@ using System.Threading.Tasks;
 
 namespace ChapeauDAL
 {
-    public class MenuItemDao : BaseDao
+   public class MenuItemDao : BaseDao
+{
+    public async Task<List<MenuItem>> GetAllMenuItemsAsync()
     {
-        public List<MenuItem> GetAllMenuItems()
+        string query = "SELECT * FROM Menu_Item";
+
+        return (await ExecuteQueryAsync(query, reader => new MenuItem
         {
-            List<MenuItem> items = new List<MenuItem>();
-            string query = "SELECT * FROM Menu_Item";
-            using (SqlConnection conn = GetConnection())
+            MenuItemId = (int)reader["menu_item_id"],
+            Name = reader["name"].ToString(),
+            Description = reader["description"].ToString(),
+            Price = (decimal)reader["price"],
+            Stock = (int)reader["stock"],
+            CategoryId = new Menu
             {
-                conn.Open(); //  ADD THIS
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        items.Add(new MenuItem
-                        {
-                            MenuItemID = (int)reader["menu_item_id"],
-                            Name = reader["name"].ToString(),
-                            Price = (decimal)reader["price"],
-                            Stock = (int)reader["stock"],
-                            CategoryID = (int)reader["category_id"], // Assuming CategoryID is used for
-                           
-                            Category = reader["course_type"].ToString(),
-                            IsActive = (bool)reader["is_active"]
-                        });
-                    }
-                }
-            }
-            return items;
-        }
+                CategoryId = (int)reader["category_id"]
+                // Will be matched to name and menu_card later in LoadMenuItems()
+            },
+            VatPercentage = (int)reader["vat_percentage"],
+            IsActive = (bool)reader["is_active"],
+            CourseType = ParseCourseTypeFromDb(reader["course_type"].ToString()),
+            IsAlcoholic = false // Optional: update if needed
+        })).ToList();
+    }
 
-        public void AddMenuItem(MenuItem item)
+    public void UpdateMenuItem(MenuItem menuItem)
+    {
+        string query = @"
+            UPDATE Menu_Item SET 
+                name = @name,
+                description = @description,
+                price = @price,
+                stock = @stock,
+                category_id = @category_id,
+                vat_percentage = @vat_percentage,
+                is_active = @is_active,
+                course_type = @course_type
+            WHERE menu_item_id = @menu_item_id";
+
+        SqlParameter[] parameters = new SqlParameter[]
         {
-            string query = "INSERT INTO Menu_Item (name, price, stock, category_id, course_type, is_active) " +
-                           "VALUES (@name, @price, @stock, @category_id, @course_type, 1)";
-            using (SqlConnection conn = GetConnection())
-            {
-                conn.Open();
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    int categoryId = GetCategoryIdByCourseType(item.Category);  // category from combobox
+            new SqlParameter("@name", menuItem.Name),
+            new SqlParameter("@description", menuItem.Description),
+            new SqlParameter("@price", menuItem.Price),
+            new SqlParameter("@stock", menuItem.Stock),
 
-                    cmd.Parameters.AddWithValue("@name", item.Name);
-                    cmd.Parameters.AddWithValue("@price", item.Price);
-                    cmd.Parameters.AddWithValue("@stock", item.Stock);
-                    cmd.Parameters.AddWithValue("@category_id", categoryId);     // correct ID
-                    cmd.Parameters.AddWithValue("@course_type", item.Category);  // readable label for UI
+            
+            new SqlParameter("@category_id", menuItem.CategoryId.CategoryId),
 
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
+            new SqlParameter("@vat_percentage", menuItem.VatPercentage),
+            new SqlParameter("@is_active", menuItem.IsActive),
+            new SqlParameter("@course_type", MapCourseTypeToDb(menuItem.CourseType)),
+            new SqlParameter("@menu_item_id", menuItem.MenuItemId)
+        };
 
+        ExecuteEditQuery(query, parameters);
+    }
 
-        // TEST TEST TEST
+    public void AddMenuItem(MenuItem menuItem)
+    {
+        string query = @"
+            INSERT INTO Menu_Item 
+                (name, description, price, stock, category_id, vat_percentage, is_active, course_type)
+            VALUES 
+                (@name, @description, @price, @stock, @category_id, @vat_percentage, @is_active, @course_type)";
 
-       
-
-        private int GetCategoryIdByCourseType(string courseType)
+        SqlParameter[] parameters = new SqlParameter[]
         {
-           
-            return courseType switch
+            new SqlParameter("@name", menuItem.Name),
+            new SqlParameter("@description", menuItem.Description),
+            new SqlParameter("@price", menuItem.Price),
+            new SqlParameter("@stock", menuItem.Stock),
+            new SqlParameter("@category_id", menuItem.CategoryId.CategoryId),
+            new SqlParameter("@vat_percentage", menuItem.VatPercentage),
+            new SqlParameter("@is_active", menuItem.IsActive),
+            new SqlParameter("@course_type", MapCourseTypeToDb(menuItem.CourseType))
+        };
+
+        ExecuteEditQuery(query, parameters);
+    }
+
+    // Maps enum to string for DB
+    private string MapCourseTypeToDb(CourseType type)
+    {
+        return type switch
+        {
+            CourseType.Starter => "Starters",
+            CourseType.Main => "Mains",
+            CourseType.Dessert => "Desserts",
+            CourseType.Drink => "Drinks",
+            _ => "Mains"
+        };
+    }
+
+    // Maps string from DB to enum
+    private CourseType ParseCourseTypeFromDb(string dbValue)
+    {
+        return dbValue switch
+        {
+            "Starters" => CourseType.Starter,
+            "Mains" => CourseType.Main,
+            "Desserts" => CourseType.Dessert,
+            "Drinks" => CourseType.Drink,
+            _ => CourseType.Main
+        };
+    }
+
+
+        public void SetMenuItemActiveStatus(int menuItemId, bool isActive)
+        {
+            string query = "UPDATE Menu_Item SET is_active = @isActive WHERE menu_item_id = @menuItemId";
+
+            SqlParameter[] parameters = new SqlParameter[]
             {
-                "Starters" => 1,
-                "Mains" => 2,
-                "Desserts" => 3,
-                "Entremets" => 5,
-                _ => throw new Exception($"No category_id mapped for course type '{courseType}'")
+        new SqlParameter("@isActive", isActive),
+        new SqlParameter("@menuItemId", menuItemId)
             };
-        }
 
-
-
-
-
-        public void UpdateMenuItem(MenuItem item)
-        {
-            string query = "UPDATE Menu_Item SET name = @name, price = @price, stock = @stock, category_id = @category_id, course_type = @course_type WHERE menu_item_id = @menu_item_id";
-            using (SqlConnection conn = GetConnection())
-            {
-                conn.Open(); // ADD THIS
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@name", item.Name);
-                    cmd.Parameters.AddWithValue("@price", item.Price);
-                    cmd.Parameters.AddWithValue("@stock", item.Stock);
-                   
-
-                    cmd.Parameters.AddWithValue("@category_id", item.CategoryID);
-
-                    cmd.Parameters.AddWithValue("@course_type", item.Category);
-                    cmd.Parameters.AddWithValue("@menu_item_id", item.MenuItemID);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        public void SetMenuItemActiveStatus(int menuItemID, bool isActive)
-        {
-            string query = "UPDATE Menu_Item SET is_active = @is_active WHERE menu_item_id = @menu_item_id";
-            using (SqlConnection conn = GetConnection())
-            {
-                conn.Open(); //  ADD THIS
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@is_active", isActive);
-                    cmd.Parameters.AddWithValue("@menu_item_id", menuItemID);
-                    cmd.ExecuteNonQuery();
-                }
-            }
+            ExecuteEditQuery(query, parameters);
         }
     }
 }
+

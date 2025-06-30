@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
 using Microsoft.Data.SqlClient;
@@ -27,7 +29,7 @@ namespace ChapeauDAL
                 // Fallback connection string if config is missing
                 connectionString = "Data Source=.;Initial Catalog=ChapeauG5Db;Integrated Security=True";
             }
-            
+
             // Initialize adapter for sync methods
             adapter = new SqlDataAdapter();
         }
@@ -122,13 +124,13 @@ namespace ChapeauDAL
                 SqlCommand command = new SqlCommand(query, conn);
                 if (sqlParameters != null)
                     command.Parameters.AddRange(sqlParameters);
-                
+
                 DataTable dataTable = new DataTable();
                 adapter.SelectCommand = command;
-                
+
                 conn.Open();
                 adapter.Fill(dataTable);
-                
+
                 return dataTable;
             }
         }
@@ -141,10 +143,10 @@ namespace ChapeauDAL
                 SqlCommand command = new SqlCommand(query, conn);
                 if (sqlParameters != null)
                     command.Parameters.AddRange(sqlParameters);
-                
+
                 conn.Open();
                 int id = Convert.ToInt32(command.ExecuteScalar());
-                
+
                 return id;
             }
         }
@@ -157,7 +159,7 @@ namespace ChapeauDAL
                 SqlCommand command = new SqlCommand(query, conn);
                 if (sqlParameters != null)
                     command.Parameters.AddRange(sqlParameters);
-                
+
                 conn.Open();
                 command.ExecuteNonQuery();
             }

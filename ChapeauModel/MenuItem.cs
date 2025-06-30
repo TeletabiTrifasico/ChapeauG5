@@ -1,3 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
 namespace ChapeauModel
 {
     public enum CourseType
@@ -7,14 +14,14 @@ namespace ChapeauModel
         Dessert,
         Drink
     }
-    
+
     public class MenuCategory
     {
         public int CategoryId { get; set; }
         public string Name { get; set; }
         public string MenuCard { get; set; }
     }
-    
+
     public class MenuItem
     {
         public int MenuItemId { get; set; }
@@ -27,9 +34,11 @@ namespace ChapeauModel
         public bool IsActive { get; set; }
         public CourseType CourseType { get; set; }
         public bool IsAlcoholic { get; set; }
-        
+
         // For display in order view
         public string DisplayPrice => $"€{Price:0.00}";
         public string DisplayInfo => $"{Name} - {DisplayPrice}";
+
+        
     }
 }

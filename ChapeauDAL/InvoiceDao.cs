@@ -161,5 +161,29 @@ namespace ChapeauDAL
             
             return invoice;
         }
+
+
+
+
+        public List<Invoice> GetInvoicesBetween(DateTime start, DateTime end)
+        {
+            string query = "SELECT * FROM Invoice WHERE created_at BETWEEN @StartDate AND @EndDate";
+            SqlParameter[] parameters = new SqlParameter[]
+            {
+        new SqlParameter("@StartDate", start),
+        new SqlParameter("@EndDate", end)
+            };
+
+            DataTable dt = ExecuteSelectQuery(query, parameters);
+            List<Invoice> invoices = new List<Invoice>();
+
+            foreach (DataRow row in dt.Rows)
+            {
+                invoices.Add(ReadTable(row));
+            }
+
+            return invoices;
+        }
+
     }
 }

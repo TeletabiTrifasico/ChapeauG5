@@ -43,9 +43,11 @@
             // 
             // employeeDataGridView
             // 
+            employeeDataGridView.AllowUserToAddRows = false;
             employeeDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             employeeDataGridView.Location = new Point(12, 42);
             employeeDataGridView.Name = "employeeDataGridView";
+            employeeDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             employeeDataGridView.Size = new Size(405, 288);
             employeeDataGridView.TabIndex = 0;
             // 
@@ -55,6 +57,7 @@
             nameTextBox.Name = "nameTextBox";
             nameTextBox.Size = new Size(100, 23);
             nameTextBox.TabIndex = 1;
+            nameTextBox.Text = "First Name";
             // 
             // usernameTextBox
             // 
@@ -62,6 +65,7 @@
             usernameTextBox.Name = "usernameTextBox";
             usernameTextBox.Size = new Size(100, 23);
             usernameTextBox.TabIndex = 2;
+            usernameTextBox.Text = "Username";
             // 
             // passwordTextBox
             // 
@@ -69,6 +73,7 @@
             passwordTextBox.Name = "passwordTextBox";
             passwordTextBox.Size = new Size(100, 23);
             passwordTextBox.TabIndex = 3;
+            passwordTextBox.Text = "Password";
             // 
             // button1
             // 
@@ -103,10 +108,12 @@
             // roleComboBox
             // 
             roleComboBox.FormattingEnabled = true;
+            roleComboBox.Items.AddRange(new object[] { "Manager", "Waiter", "Kitchen", "Bar" });
             roleComboBox.Location = new Point(602, 342);
             roleComboBox.Name = "roleComboBox";
             roleComboBox.Size = new Size(121, 23);
             roleComboBox.TabIndex = 7;
+            roleComboBox.Text = "Role";
             // 
             // lastNameTextBox
             // 
@@ -114,6 +121,7 @@
             lastNameTextBox.Name = "lastNameTextBox";
             lastNameTextBox.Size = new Size(100, 23);
             lastNameTextBox.TabIndex = 8;
+            lastNameTextBox.Text = "Last Name";
             // 
             // emailTextBox
             // 
@@ -121,6 +129,7 @@
             emailTextBox.Name = "emailTextBox";
             emailTextBox.Size = new Size(100, 23);
             emailTextBox.TabIndex = 9;
+            emailTextBox.Text = "email";
             // 
             // EmployeeManagementForm
             // 
