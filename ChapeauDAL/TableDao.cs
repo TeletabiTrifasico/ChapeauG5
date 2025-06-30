@@ -8,6 +8,7 @@ namespace ChapeauDAL
 {
     public class TableDao : BaseDao
     {
+        //This method loads all tables from database and maps each one to a table object and returns a list of tables.
         public List<Table> GetAllTables()
         {
             string query = "SELECT * FROM [Table] ORDER BY table_id";
@@ -30,7 +31,8 @@ namespace ChapeauDAL
             
             return tables;
         }
-        
+
+        // This method updates the status of a table in the database by converting the enum to a string database expects.
         public void UpdateTableStatus(int tableId, TableStatus status)
         {
             try
@@ -68,7 +70,7 @@ namespace ChapeauDAL
             }
         }
         
-        // Add this method to get current table status
+        // This methos retrieves the current status of a table from database by its id.
         public string GetCurrentTableStatus(int tableId)
         {
             string query = "SELECT status FROM [Table] WHERE table_id = @TableId";
@@ -84,7 +86,8 @@ namespace ChapeauDAL
             
             return "Unknown";
         }
-        
+
+        // This method parses the string status from database to the TableStatus enum.
         private TableStatus ParseTableStatus(string status)
         {
             if (Enum.TryParse<TableStatus>(status, true, out TableStatus result))
