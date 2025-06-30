@@ -9,16 +9,24 @@ namespace ChapeauG5
 {
     public partial class OrderView : Form
     {
+        // The currently logged-in employee
         private Employee loggedInEmployee;
+        // The table for which the order is being managed
         private Table selectedTable;
+        // Services for menu, order, and table operations
         private MenuService menuService;
         private OrderService orderService;
         private TableService tableService;
-        private int? currentOrderId; // Make nullable since we might not have an order yet
+        // The current order ID (nullable, as there may not be an order yet)
+        private int? currentOrderId;
+        // List of items already ordered (from the database)
         private List<OrderItem> orderedItems;
+        // List of new items added in this session (not yet saved)
         private List<OrderItem> newOrderItems;
+        // Indicates if we are editing an existing order
         private bool isExistingOrder = false;
         
+        // Constructor: initializes services, state, and references to employee/table
         public OrderView(Employee employee, Table table)
         {
             InitializeComponent();
@@ -31,7 +39,7 @@ namespace ChapeauG5
             newOrderItems = new List<OrderItem>();
         }
         
-        // Loading the page
+        // Form load event: sets up UI and loads existing order if present
         private void OrderView_Load(object sender, EventArgs e)
         {
             try
@@ -40,16 +48,20 @@ namespace ChapeauG5
 
                 LoadMenuCategories();
                 
+                // Check if there's already an order for this table
                 Order existingOrder = orderService.GetOrderByTableId(selectedTable.TableId);
                 
                 if (existingOrder != null)
                 {
-                    currentOrderId = existingOrder.OrderId;
+                    // Load order and its items
+                    Order orderWithItems = orderService.GetOrderWithItemsById(existingOrder.OrderId);
+                    currentOrderId = orderWithItems.OrderId;
                     isExistingOrder = true;
-                    
-                    orderedItems = orderService.GetOrderItemsByOrderId(existingOrder.OrderId);
+
+                    orderedItems = orderWithItems.OrderItems ?? new List<OrderItem>();
                     LoadOrderedItems();
-                    
+
+                    // Mark table as occupied
                     tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
                 }
 
@@ -62,8 +74,7 @@ namespace ChapeauG5
             }
         }
 
-
-        // Loading the menu categories
+        // Loads menu categories into the category combo box
         private void LoadMenuCategories()
         {
             try
@@ -87,8 +98,7 @@ namespace ChapeauG5
             }
         }
 
-
-        // Loading the menu items based on selected category
+        // When a menu category is selected, load its items
         private void cmbCategory_SelectedIndexChanged(object sender, EventArgs e)
         {
             try
@@ -105,6 +115,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Set up the columns for the menu items ListView
         private void SetupMenuListView()
         {
             try
@@ -122,6 +134,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Load menu items for the selected category
         private void LoadMenuItems(MenuCategory category)
         {
             try
@@ -142,6 +156,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Helper to create a ListViewItem for a menu item
         private ListViewItem CreateListViewItem(MenuItem item)
         {
             try
@@ -160,21 +176,24 @@ namespace ChapeauG5
             }
         }
 
-        // Adding item to order
+        // Add selected menu item to the new order list
         private void btnAddToOrder_Click(object sender, EventArgs e)
         {
             try
             {
                 if (!ValidateSelection(out MenuItem selectedItem, out int quantity, out string comment)) return;
 
+                // Check if item with same comment already exists in new order
                 var existingItem = orderService.FindExistingOrderItem(newOrderItems, selectedItem, comment);
 
                 if (existingItem != null)
                 {
+                    // If exists, just update the quantity
                     orderService.UpdateOrderItemQuantity(existingItem, quantity);
                 }
                 else
                 {
+                    // Otherwise, create a new order item
                     var newItem = orderService.CreateNewOrderItem(selectedItem, quantity, comment, currentOrderId);
                     newOrderItems.Add(newItem);
                 }
@@ -192,6 +211,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Validates that a menu item is selected and quantity is valid
         private bool ValidateSelection(out MenuItem selectedItem, out int quantity, out string comment)
         {
             selectedItem = null;
@@ -224,6 +245,8 @@ namespace ChapeauG5
                 return false;
             }
         }
+
+        // Resets the add-to-order form fields
         private void ResetOrderForm()
         {
             try
@@ -238,6 +261,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Save the current order (new or existing)
         private void btnSaveOrder_Click(object sender, EventArgs e)
         {
             try
@@ -257,6 +282,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Checks if there are items to save
         private bool ValidateOrder()
         {
             if (!orderService.ValidateOrderHasItems(newOrderItems))
@@ -267,15 +294,21 @@ namespace ChapeauG5
             }
             return true;
         }
+
+        // Creates a new order in the database
         private void CreateNewOrder()
         {
             currentOrderId = orderService.CreateOrder(selectedTable.TableId, loggedInEmployee.EmployeeId);
             tableService.UpdateTableStatus(selectedTable.TableId, TableStatus.Occupied);
         }
+
+        // Saves all new order items to the database
         private void SaveOrderItems()
         {
             orderService.SaveOrderItems(currentOrderId.Value, newOrderItems);
         }
+
+        // Finalizes the order after saving: updates UI and clears new items
         private void FinalizeOrder()
         {
             isExistingOrder = true;
@@ -288,13 +321,14 @@ namespace ChapeauG5
             LoadOrderedItems();
         }
 
-        // Removing item from order
+        // Remove selected item from the new order list
         private void btnRemoveItem_Click(object sender, EventArgs e)
         {
             try
             {
                 if (!ValidateItemSelection(out OrderItem selectedItem)) return;
 
+                // Confirm removal if item is already saved in DB
                 if (selectedItem.OrderItemId != 0 && !ConfirmItemRemoval())
                     return;
 
@@ -307,6 +341,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Validates that an order item is selected for removal/editing
         private bool ValidateItemSelection(out OrderItem selectedItem)
         {
             selectedItem = null;
@@ -330,6 +366,8 @@ namespace ChapeauG5
                 return false;
             }
         }
+
+        // Asks user to confirm removal of an already saved item
         private bool ConfirmItemRemoval()
         {
             try
@@ -350,7 +388,7 @@ namespace ChapeauG5
             }
         }
 
-        // Editing an item in the order
+        // Edit selected order item (quantity/comment)
         private void btnEditItem_Click(object sender, EventArgs e)
         {
             try
@@ -372,6 +410,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Builds a modal form for editing an order item
         private Form BuildEditForm(OrderItem selectedItem, out NumericUpDown nudEditQuantity, out TextBox txtEditComment)
         {
             try
@@ -411,7 +451,7 @@ namespace ChapeauG5
             }
         }
 
-        // Canceling the order view
+        // Cancel and close the order view, possibly resetting table status
         private void btnCancel_Click(object sender, EventArgs e)
         {
             try
@@ -433,6 +473,8 @@ namespace ChapeauG5
                 this.Close();
             }
         }
+
+        // Confirm with user before closing if there are unsaved changes
         private bool ConfirmCancel()
         {
             try
@@ -456,10 +498,14 @@ namespace ChapeauG5
                 return false;
             }
         }
+
+        // Determines if the table status should be reset to free
         private bool ShouldResetTable()
         {
             return !isExistingOrder;
         }
+
+        // Sets the table status to free in the database
         private void ResetTableStatus()
         {
             try
@@ -472,7 +518,7 @@ namespace ChapeauG5
             }
         }
 
-        // Marking an item as served
+        // Mark selected order item as served
         private void btnMarkServed_Click(object sender, EventArgs e)
         {
             try
@@ -505,6 +551,8 @@ namespace ChapeauG5
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Helper to get the selected order item from the ordered list
         private bool TryGetSelectedOrderItem(out OrderItem selectedItem)
         {
             selectedItem = null;
@@ -527,6 +575,8 @@ namespace ChapeauG5
                 return false;
             }
         }
+
+        // Refreshes both new and ordered items views and payment button
         private void RefreshOrderViews()
         {
             try
@@ -542,7 +592,7 @@ namespace ChapeauG5
             }
         }
 
-        // Payment processing
+        // Handles payment button click: checks if all items are served and order is saved
         private void btnPayment_Click(object sender, EventArgs e)
         {
             try
@@ -561,6 +611,8 @@ namespace ChapeauG5
                     "Payment Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Checks if all items in the new order are marked as served
         private bool AreAllItemsServed()
         {
             if (!orderService.AreAllItemsServed(newOrderItems))
@@ -571,6 +623,8 @@ namespace ChapeauG5
             }
             return true;
         }
+
+        // Ensures the order is saved before payment
         private bool IsOrderSaved(object sender, EventArgs e)
         {
             if (!currentOrderId.HasValue || !isExistingOrder)
@@ -600,6 +654,8 @@ namespace ChapeauG5
 
             return true;
         }
+
+        // Checks if the order is empty before payment
         private bool IsOrderEmpty()
         {
             if (orderService.IsOrderEmpty(orderedItems))
@@ -610,6 +666,8 @@ namespace ChapeauG5
             }
             return false;
         }
+
+        // Opens the payment form and processes payment
         private void ProcessPayment()
         {
             try
@@ -632,13 +690,7 @@ namespace ChapeauG5
             }
         }
 
-
-
-
-
-
-
-        // Listing new added rders
+        // Lists all new order items in the ListView
         private void ListNewOrders()
         {
             try
@@ -662,6 +714,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Sets up columns for the new order items ListView
         private void SetupOrderListView()
         {
             try
@@ -683,6 +737,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Creates a ListViewItem for a new order item
         private ListViewItem CreateOrderListViewItem(OrderItem item)
         {
             try
@@ -712,6 +768,8 @@ namespace ChapeauG5
                 return new ListViewItem("Error loading item");
             }
         }
+
+        // Enables/disables order action buttons based on whether there are items
         private void UpdateOrderActionButtons()
         {
             try
@@ -729,7 +787,7 @@ namespace ChapeauG5
             }
         }
 
-        // Loading ordered items
+        // Loads all ordered items (from DB) into the ListView
         private void LoadOrderedItems()
         {
             try
@@ -760,6 +818,8 @@ namespace ChapeauG5
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Sets up columns for the ordered items ListView
         private void SetupOrderedListView()
         {
             try
@@ -783,6 +843,8 @@ namespace ChapeauG5
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Creates a ListViewItem for an ordered item
         private ListViewItem CreateOrderedListViewItem(OrderItem item)
         {
             try
@@ -812,6 +874,8 @@ namespace ChapeauG5
                 return new ListViewItem("Error loading item");
             }
         }
+
+        // Updates the order total label in the UI
         private void UpdateOrderTotalLabel(decimal total)
         {
             try
@@ -829,7 +893,7 @@ namespace ChapeauG5
             }
         }
 
-        // Updating the payment button state
+        // Updates the payment button state based on order status
         private void UpdatePaymentButtonState()
         {
             try
